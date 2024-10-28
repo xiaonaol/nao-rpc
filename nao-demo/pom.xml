@@ -12,7 +12,7 @@
     <artifactId>nao-demo</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>nrpc-client</module>
+        <module>nrpc-consumer</module>
         <module>nrpc-provider</module>
         <module>nrpc-api</module>
     </modules>
