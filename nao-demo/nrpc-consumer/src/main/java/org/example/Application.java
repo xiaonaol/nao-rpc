@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.discovery.RegistryConfig;
+
 /**
  * @author xiaonaol
  * @date 2024/10/27

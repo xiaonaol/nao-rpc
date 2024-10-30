@@ -1,15 +1,14 @@
 package org.example;
 
+import org.example.discovery.RegistryConfig;
 import org.example.impl.HelloNrpcImpl;
-
-import java.rmi.registry.Registry;
 
 /**
  * @author xiaonaol
  * @date 2024/10/27
  **/
 public class Application {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         // 服务提供方，需要注册服务，启动服务
         // 1、封装要发布的服务
         ServiceConfig<HelloNrpc> service = new ServiceConfig<>();

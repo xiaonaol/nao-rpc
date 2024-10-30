@@ -1,10 +1,11 @@
 package org.example;
 
-
+import org.example.discovery.Registry;
+import org.example.discovery.RegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+import java.security.Provider;
 import java.util.List;
 
 /**
@@ -17,9 +18,20 @@ public class NrpcBootstrap {
     private static final Logger log = LoggerFactory.getLogger(NrpcBootstrap.class);
 
     // NrpcBootstrap是个单例，每个应用程序只有一个实例
-    private static NrpcBootstrap nrpcBootstrap = new NrpcBootstrap();
+    private static final NrpcBootstrap nrpcBootstrap = new NrpcBootstrap();
+
+    // 定义相关的一些基础配置
+    private String appName = "default";
+    private RegistryConfig registryConfig;
+    private ProtocolConfig protocolConfig;
+    private int port = 8088;
+
+    // 注册中心
+    private Registry registry;
+
 
     private NrpcBootstrap() {
+
         // 构造启动引导程序，需要做什么
 
     }
@@ -31,22 +43,25 @@ public class NrpcBootstrap {
 
     /**
      * 定义当前应用的名字
-     * @param appName
+     * @param appName 应用名
      * @return null
      * @author xiaonaol
      */
     public NrpcBootstrap application(String appName) {
+        this.appName = appName;
         return this;
     }
 
 
     /**
      * 配置一个注册中心
-     * @param registryConfig
+     * @param registryConfig 注册中心配置
      * @return this当前实例
      * @author xiaonaol
      */
     public NrpcBootstrap registry(RegistryConfig registryConfig) {
+
+        this.registry = registryConfig.getRegistry();
         return this;
     }
 
@@ -57,13 +72,14 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap protocol(ProtocolConfig protocolConfig) {
+        this.protocolConfig = protocolConfig;
         if(log.isDebugEnabled()) {
             log.debug("当前工程使用了： {}协议进行序列化", protocolConfig.toString());
         }
         return this;
     }
 
-    /**
+    /*
      * ----------------------------服务提供方相关api--------------------------------
      */
 
@@ -74,9 +90,8 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap publish(ServiceConfig<?> service) {
-        if(log.isDebugEnabled()) {
-            log.debug("服务{}，已经被注册", service.getInterface().getName());
-        }
+        // 我们抽象了注册中心的概念，使用注册中心的一个实现完成注册
+        registry.register(service);
         return this;
     }
 
@@ -86,22 +101,23 @@ public class NrpcBootstrap {
      * @return this当前实例
      * @author xiaonaol
      */
-    public NrpcBootstrap publish(List<?> services) {
+    public NrpcBootstrap publish(List<ServiceConfig<?>> services) {
+        for (ServiceConfig<?> service: services) {
+            this.publish(service);
+        }
         return this;
     }
 
     /**
      * 启动netty
-     * @param
-     * @return null
      * @author xiaonaol
      */
-    public NrpcBootstrap start() {
-        return this;
+    public void start() throws InterruptedException {
+        Thread.sleep(10000);
     }
 
 
-    /**
+    /*
      * ----------------------------服务调用方相关api--------------------------------
      */
 
@@ -110,7 +126,7 @@ public class NrpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         return this;
     }
-    /**
+    /*
      * ----------------------------服务核心api--------------------------------
      */
 }
