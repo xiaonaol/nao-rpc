@@ -134,6 +134,8 @@ public class NrpcBootstrap {
     public NrpcBootstrap reference(ReferenceConfig<?> reference) {
         // 在这个方法里是否可以拿到相关配置项
         // 配置reference，将来调用get方法时，方便生成代理对象
+        // 1、reference需要一个注册中心
+        reference.setRegistry(registry);
         return this;
     }
     /*

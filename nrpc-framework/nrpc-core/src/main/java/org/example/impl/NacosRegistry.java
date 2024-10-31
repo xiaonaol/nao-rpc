@@ -10,6 +10,8 @@ import org.example.utils.zookeeper.NetUtils;
 import org.example.utils.zookeeper.ZookeeperNode;
 import org.example.utils.zookeeper.ZookeeperUtils;
 
+import java.net.InetSocketAddress;
+
 /**
  * @author xiaonaol
  * @date 2024/10/30
@@ -50,5 +52,10 @@ public class NacosRegistry extends AbstractRegistry {
         if(log.isDebugEnabled()) {
             log.debug("服务{}，已经被注册", service.getInterface().getName());
         }
+    }
+
+    @Override
+    public InetSocketAddress lookup(String name) {
+        return null;
     }
 }

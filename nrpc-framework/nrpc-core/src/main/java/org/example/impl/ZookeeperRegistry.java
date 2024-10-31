@@ -6,9 +6,16 @@ import org.apache.zookeeper.ZooKeeper;
 import org.example.Constant;
 import org.example.ServiceConfig;
 import org.example.discovery.AbstractRegistry;
+import org.example.exceptions.DiscoveryException;
+import org.example.exceptions.NetworkException;
 import org.example.utils.zookeeper.NetUtils;
 import org.example.utils.zookeeper.ZookeeperNode;
 import org.example.utils.zookeeper.ZookeeperUtils;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author xiaonaol
@@ -50,5 +57,29 @@ public class ZookeeperRegistry extends AbstractRegistry {
         if(log.isDebugEnabled()) {
             log.debug("服务{}，已经被注册", service.getInterface().getName());
         }
+    }
+
+    @Override
+    public InetSocketAddress lookup(String serviceName) {
+
+        // 1. 找到服务对应的节点
+        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
+
+        // 2. 从zk中获取他的子节点
+        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, null);
+
+        // 获取了所有的可用的服务列表
+        List<InetSocketAddress> inetSocketAddresses = children.stream().map( ipString -> {
+            String[] ipAndPort = ipString.split(":");
+            String ip = ipAndPort[0];
+            int port = Integer.valueOf(ipAndPort[1]);
+            return new InetSocketAddress(ip, port);
+        }).toList();
+
+        if(inetSocketAddresses.isEmpty()) {
+            throw new DiscoveryException("未发现任何可用的服务主机");
+        }
+
+        return inetSocketAddresses.get(0);
     }
 }

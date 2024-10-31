@@ -6,6 +6,7 @@ import org.example.Constant;
 import org.example.exceptions.ZookeeperException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -112,4 +113,19 @@ public class ZookeeperUtils {
         }
     }
 
+
+    /**
+     * 查询一个节点的子节点
+     * @param zooKeeper zk实例
+     * @return 子元素列表
+     * @author xiaonaol
+     */
+    public static List<String> getChildren(ZooKeeper zooKeeper, String serviceNode, Watcher watcher) {
+        try {
+            return zooKeeper.getChildren(serviceNode, watcher);
+        } catch (KeeperException | InterruptedException e) {
+            log.error("获取节点【{}】的子节点失败", serviceNode);
+            throw new ZookeeperException(e);
+        }
+    }
 }

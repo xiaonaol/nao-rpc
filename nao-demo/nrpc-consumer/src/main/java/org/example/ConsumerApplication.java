@@ -6,7 +6,7 @@ import org.example.discovery.RegistryConfig;
  * @author xiaonaol
  * @date 2024/10/27
  **/
-public class Application {
+public class ConsumerApplication {
     public static void main(String[] args) {
         // 想尽一切办法获取代理对象，使用ReferenceConfig进行封装
         // reference一定用生成代理的模板方法.get
