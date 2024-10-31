@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.Provider;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author xiaonaol
@@ -28,6 +30,10 @@ public class NrpcBootstrap {
 
     // 注册中心
     private Registry registry;
+
+    // 维护已经发布且暴露的服务列表 key -> interface的全限定名
+    private static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
+
 
 
     private NrpcBootstrap() {
@@ -92,6 +98,10 @@ public class NrpcBootstrap {
     public NrpcBootstrap publish(ServiceConfig<?> service) {
         // 我们抽象了注册中心的概念，使用注册中心的一个实现完成注册
         registry.register(service);
+
+        // 1.当服务调用方，通过接口、方法名、具体的方法参数列表发起调用，提供方怎么知道使用哪一个实现
+        // （1）new一个 （2）spring beanFactory.getBean(class) （3）自己维护映射关系
+        SERVERS_LIST.put(service.getInterface().getName(), service);
         return this;
     }
 
@@ -113,7 +123,7 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public void start() throws InterruptedException {
-        Thread.sleep(10000);
+        Thread.sleep(10000000);
     }
 
 

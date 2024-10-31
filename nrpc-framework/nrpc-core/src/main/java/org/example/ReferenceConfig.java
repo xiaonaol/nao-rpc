@@ -19,6 +19,11 @@ public class ReferenceConfig<T> {
         this.interfaceRef = interfaceRef;
     }
 
+
+    /**
+     * 代理设计模式，生成一个api接口的代理对象
+     * @author 代理对象
+     */
     public T get() {
         // 此处是使用动态代理完成了一些工作
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
