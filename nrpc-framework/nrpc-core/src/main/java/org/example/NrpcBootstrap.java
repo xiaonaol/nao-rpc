@@ -1,14 +1,24 @@
 package org.example;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.Provider;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author xiaonaol
@@ -34,7 +44,7 @@ public class NrpcBootstrap {
     // 维护已经发布且暴露的服务列表 key -> interface的全限定名
     private static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
 
-
+    public final static Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
 
     private NrpcBootstrap() {
 
@@ -122,8 +132,48 @@ public class NrpcBootstrap {
      * 启动netty
      * @author xiaonaol
      */
-    public void start() throws InterruptedException {
-        Thread.sleep(10000000);
+    public void start() {
+        // 1、创建eventLoop，老板只负责处理请求，之后会将请求分发至worker
+        EventLoopGroup boss = new NioEventLoopGroup(2);
+        EventLoopGroup worker = new NioEventLoopGroup(10);
+        try {
+
+            // 2、需要一个服务器引导程序
+            ServerBootstrap serverBootstrap = new ServerBootstrap();
+            // 3、配置服务器
+            serverBootstrap = serverBootstrap.group(boss, worker)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+                            // 是核心，我们需要添加很多入站和出站的handler
+                            socketChannel.pipeline().addLast(new SimpleChannelInboundHandler<>() {
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext channelHandlerContext, Object msg) throws Exception {
+                                    ByteBuf byteBuf = (ByteBuf) msg;
+                                    log.info("byteBuf-->{}", byteBuf.toString(Charset.defaultCharset()));
+
+                                    // 可以就此不管了，也可以写回去
+                                    channelHandlerContext.channel().writeAndFlush(Unpooled.copiedBuffer("nrpc--hello".getBytes()));
+                                }
+                            });
+                        }
+                    });
+
+            // 4、绑定端口
+            ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
+
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        } finally {
+            try {
+                boss.shutdownGracefully().sync();
+                worker.shutdownGracefully().sync();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 

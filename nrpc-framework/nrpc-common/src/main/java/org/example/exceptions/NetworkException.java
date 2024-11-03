@@ -7,4 +7,7 @@ package org.example.exceptions;
 public class NetworkException extends RuntimeException {
     public NetworkException() {}
     public NetworkException(Throwable cause) {}
+
+    public NetworkException(String s) {
+    }
 }
