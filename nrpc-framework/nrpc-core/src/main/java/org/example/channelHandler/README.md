@@ -1,5 +1,12 @@
 1、服务调用方  
 发送报文 writeAndFlush(Object) 请求  
+Object(NrpcRequest) 包含什么信息？  
+1、请求id (long)  
+2、压缩类型 (1byte)  
+3、序列化方式 (1byte)   
+4、消息类型 (普通类型 心跳检测)  
+5、负载 (接口名 方法名 参数列表 返回值类型)
+
 pipeline生效，报文开始出站  
 ---> 第一个处理器 (转化object -> msg(请求报文))  
 ---> 第二个处理器 (序列化)  
