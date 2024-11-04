@@ -18,6 +18,7 @@ import java.security.Provider;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -44,7 +45,10 @@ public class NrpcBootstrap {
     // 维护已经发布且暴露的服务列表 key -> interface的全限定名
     private static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
 
-    public final static Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
+    public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
+
+    // 定义全局的对外挂起的 completableFuture
+    public final static Map<Long, CompletableFuture<Object>> PENDING_QUEST = new ConcurrentHashMap<>(128);
 
     private NrpcBootstrap() {
 

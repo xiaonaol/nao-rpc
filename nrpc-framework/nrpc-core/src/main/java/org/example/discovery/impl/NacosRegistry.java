@@ -1,4 +1,4 @@
-package org.example.impl;
+package org.example.discovery.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
@@ -6,31 +6,26 @@ import org.apache.zookeeper.ZooKeeper;
 import org.example.Constant;
 import org.example.ServiceConfig;
 import org.example.discovery.AbstractRegistry;
-import org.example.exceptions.DiscoveryException;
-import org.example.exceptions.NetworkException;
 import org.example.utils.zookeeper.NetUtils;
 import org.example.utils.zookeeper.ZookeeperNode;
 import org.example.utils.zookeeper.ZookeeperUtils;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author xiaonaol
  * @date 2024/10/30
  **/
 @Slf4j
-public class ZookeeperRegistry extends AbstractRegistry {
+public class NacosRegistry extends AbstractRegistry {
     // 维护一个zk实例
     private ZooKeeper zooKeeper;
 
-    public ZookeeperRegistry() {
+    public NacosRegistry() {
         this.zooKeeper = ZookeeperUtils.createZookeeper();
     }
 
-    public ZookeeperRegistry(String connectString, int timeout) {
+    public NacosRegistry(String connectString, int timeout) {
         this.zooKeeper = ZookeeperUtils.createZookeeper(connectString, timeout);
     }
 
@@ -51,7 +46,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         String node = parentNode + "/" + NetUtils.getIp() + ":" + 8088;
         if(!ZookeeperUtils.exists(zooKeeper, node, null)) {
             ZookeeperNode zookeeperNode = new ZookeeperNode(node, null);
-            ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.EPHEMERAL);
+            ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.PERSISTENT);
         }
 
         if(log.isDebugEnabled()) {
@@ -60,26 +55,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
 
     @Override
-    public InetSocketAddress lookup(String serviceName) {
-
-        // 1. 找到服务对应的节点
-        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
-
-        // 2. 从zk中获取他的子节点
-        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, null);
-
-        // 获取了所有的可用的服务列表
-        List<InetSocketAddress> inetSocketAddresses = children.stream().map( ipString -> {
-            String[] ipAndPort = ipString.split(":");
-            String ip = ipAndPort[0];
-            int port = Integer.valueOf(ipAndPort[1]);
-            return new InetSocketAddress(ip, port);
-        }).toList();
-
-        if(inetSocketAddresses.isEmpty()) {
-            throw new DiscoveryException("未发现任何可用的服务主机");
-        }
-
-        return inetSocketAddresses.get(0);
+    public InetSocketAddress lookup(String name) {
+        return null;
     }
 }

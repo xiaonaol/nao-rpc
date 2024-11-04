@@ -2,8 +2,8 @@ package org.example.discovery;
 
 import org.example.Constant;
 import org.example.exceptions.DiscoveryException;
-import org.example.impl.NacosRegistry;
-import org.example.impl.ZookeeperRegistry;
+import org.example.discovery.impl.NacosRegistry;
+import org.example.discovery.impl.ZookeeperRegistry;
 
 /**
  * @author xiaonaol
