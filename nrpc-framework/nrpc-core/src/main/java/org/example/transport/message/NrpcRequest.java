@@ -1,6 +1,7 @@
 package org.example.transport.message;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
  * @author xiaonaol
  * @date 2024/11/4
  **/
+@Builder
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

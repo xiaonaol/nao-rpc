@@ -3,12 +3,16 @@ package org.example.proxy.handler;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.discovery.Registry;
 import org.example.exceptions.DiscoveryException;
 import org.example.exceptions.NetworkException;
+import org.example.transport.message.NrpcRequest;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -25,6 +29,7 @@ import java.util.concurrent.TimeoutException;
  * @date 2024/11/4
  **/
 @Slf4j
+@Builder
 public class RpcConsumerInvocationHandler implements InvocationHandler {
     // 注册中心和接口
     private final Registry registry;
@@ -60,6 +65,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         /*
          * ------------------ 封装报文 ---------------------------
          */
+
+        NrpcRequest.builder()
+                .request(1L)
 
         /*
          * ------------------异步策略-------------------------

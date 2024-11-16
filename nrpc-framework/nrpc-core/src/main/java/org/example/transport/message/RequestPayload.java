@@ -1,10 +1,19 @@
 package org.example.transport.message;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * 请求调用方所请求的接口方法的描述
  * @author xiaonaol
  * @date 2024/11/4
  **/
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class RequestPayload {
     // 接口名 -- org.example.HelloNrpc
     private String interfaceName;
