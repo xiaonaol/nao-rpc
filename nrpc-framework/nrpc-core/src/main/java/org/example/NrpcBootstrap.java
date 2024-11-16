@@ -4,9 +4,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LoggingHandler;
+import org.example.channelHandler.handler.NrpcMessageDecoder;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.slf4j.Logger;
@@ -151,16 +154,8 @@ public class NrpcBootstrap {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             // 是核心，我们需要添加很多入站和出站的handler
-                            socketChannel.pipeline().addLast(new SimpleChannelInboundHandler<>() {
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext channelHandlerContext, Object msg) throws Exception {
-                                    ByteBuf byteBuf = (ByteBuf) msg;
-                                    log.info("byteBuf-->{}", byteBuf.toString(Charset.defaultCharset()));
-
-                                    // 可以就此不管了，也可以写回去
-                                    channelHandlerContext.channel().writeAndFlush(Unpooled.copiedBuffer("nrpc--hello".getBytes()));
-                                }
-                            });
+                            socketChannel.pipeline().addLast(new LoggingHandler())
+                                    .addLast(new NrpcMessageDecoder());
                         }
                     });
 
