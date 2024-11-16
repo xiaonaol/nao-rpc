@@ -7,12 +7,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.zookeeper.server.Request;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.discovery.Registry;
 import org.example.exceptions.DiscoveryException;
 import org.example.exceptions.NetworkException;
 import org.example.transport.message.NrpcRequest;
+import org.example.transport.message.RequestPayload;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -65,9 +67,23 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         /*
          * ------------------ 封装报文 ---------------------------
          */
+        RequestPayload requestPayload = RequestPayload.builder()
+                .interfaceName(interfaceRef.getName())
+                .methodName(method.getName())
+                .parametersType(method.getParameterTypes())
+                .parametersValue(args)
+                .returnType(method.getReturnType())
+                .build();
 
-        NrpcRequest.builder()
-                .request(1L)
+        // TODO 需要对各种请求id和各种类型做区分
+        NrpcRequest nrpcRequest = NrpcRequest.builder()
+                .requestId(1L)
+                .compressType((byte) 1)
+                .requestType((byte) 1)
+                .serializeType((byte) 1)
+                .requestPayload(requestPayload)
+                .build();
+
 
         /*
          * ------------------异步策略-------------------------
@@ -79,7 +95,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         // 将completableFuture暴露
         NrpcBootstrap.PENDING_QUEST.put(1L, completableFuture);
 
-        channel.writeAndFlush(Unpooled.copiedBuffer("hello".getBytes())).addListener((ChannelFutureListener) promise -> {
+        // 这里直接writeAndFlush写出了一个请求，这个请求的实例就会进入pipline执行出站的一系列操作
+        // 我们可以想象到，第一个出站程序一定是将 nrpcRequest -> 二进制报文
+        channel.writeAndFlush(nrpcRequest).addListener((ChannelFutureListener) promise -> {
             // 只需要处理以下异常就行了
             if (!promise.isSuccess()) {
                 completableFuture.completeExceptionally(promise.cause());
