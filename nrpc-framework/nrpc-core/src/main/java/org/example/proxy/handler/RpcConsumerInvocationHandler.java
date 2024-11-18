@@ -11,6 +11,7 @@ import org.apache.zookeeper.server.Request;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.discovery.Registry;
+import org.example.enumeration.RequestType;
 import org.example.exceptions.DiscoveryException;
 import org.example.exceptions.NetworkException;
 import org.example.transport.message.NrpcRequest;
@@ -79,7 +80,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         NrpcRequest nrpcRequest = NrpcRequest.builder()
                 .requestId(1L)
                 .compressType((byte) 1)
-                .requestType((byte) 1)
+                .requestType(RequestType.REQUEST.getId())
                 .serializeType((byte) 1)
                 .requestPayload(requestPayload)
                 .build();
@@ -91,7 +92,6 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // 4、写出报文
         CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-
         // 将completableFuture暴露
         NrpcBootstrap.PENDING_QUEST.put(1L, completableFuture);
 

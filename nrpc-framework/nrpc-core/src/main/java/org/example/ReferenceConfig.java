@@ -37,7 +37,7 @@ public class ReferenceConfig<T> {
      * @return 代理对象
      */
     public T get() {
-        // 次出一定是使用动态代理完成了一些工作
+        // 使用动态代理完成了一些工作
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Class[] classes = new Class[]{interfaceRef};
         InvocationHandler handler = new RpcConsumerInvocationHandler(registry, interfaceRef);

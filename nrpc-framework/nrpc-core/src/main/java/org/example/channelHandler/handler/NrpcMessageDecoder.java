@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
+import org.example.enumeration.RequestType;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.RequestPayload;
@@ -39,6 +40,7 @@ public class NrpcMessageDecoder extends LengthFieldBasedFrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        log.info("开始解码报文……");
         Object decode = super.decode(ctx, in);
         if(decode instanceof ByteBuf byteBuf){
             return decodeFrame(byteBuf);
@@ -88,8 +90,8 @@ public class NrpcMessageDecoder extends LengthFieldBasedFrameDecoder {
         nrpcRequest.setCompressType(compressType);
         nrpcRequest.setRequestType(requestType);
 
-        // TODO 心跳请求没有负载，此处可以判断并直接返回
-        if(requestType == 2) {
+        // 心跳请求没有负载，直接返回
+        if(requestType == RequestType.HEART_BEAT.getId()) {
             return nrpcRequest;
         }
 

@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
+import org.example.enumeration.RequestType;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.RequestPayload;
@@ -42,30 +43,49 @@ public class NrpcMessageEncoder extends MessageToByteEncoder<NrpcRequest> {
         // 2个字节的头部长度
         byteBuf.writeShort(MessageFormatConstant.HEADER_LENGTH);
         //
-        byteBuf.writerIndex(byteBuf.writerIndex() + 4);
+        byteBuf.writerIndex(byteBuf.writerIndex() + MessageFormatConstant.FULL_FIELD_LENGTH);
         // 3个类型
         byteBuf.writeByte(nrpcRequest.getRequestType());
         byteBuf.writeByte(nrpcRequest.getSerializeType());
         byteBuf.writeByte(nrpcRequest.getCompressType());
         // 8字节的请求id
         byteBuf.writeLong(nrpcRequest.getRequestId());
+
+        // 如果是心跳请求就不处理请求体
+        if(nrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()) {
+            // 处理一下总长度，总长度 = header长度
+            int writeIndex = byteBuf.writerIndex();
+            byteBuf.writerIndex(MessageFormatConstant.MAGIC_LENGTH + MessageFormatConstant.VERSION_LENGTH
+                    + MessageFormatConstant.HEADER_FIELD_LENGTH);
+            byteBuf.writeInt(MessageFormatConstant.HEADER_LENGTH);
+            byteBuf.writerIndex(writeIndex);
+            return;
+        }
+
         // 写入请求体requestPayload
         byte[] body = getBodyBytes(nrpcRequest.getRequestPayload());
-        byteBuf.writeBytes(body);
+        if(body != null) {
+            byteBuf.writeBytes(body);
+        }
 
+        int bodyLength = body == null ? 0 : body.length;
         // 重新处理报文的总长度
         // 保存当前写指针的位置
         int writerIndex = byteBuf.writerIndex();
         // 将写指针移动到总长度的位置上
-        byteBuf.writerIndex(7);
-        byteBuf.writeInt(MessageFormatConstant.HEADER_LENGTH + body.length);
+        byteBuf.writerIndex(MessageFormatConstant.MAGIC_LENGTH + MessageFormatConstant.VERSION_LENGTH
+            + MessageFormatConstant.HEADER_FIELD_LENGTH);
+        byteBuf.writeInt(MessageFormatConstant.HEADER_LENGTH + bodyLength);
 
         // 将写指针归位
         byteBuf.writerIndex(writerIndex);
     }
 
     private byte[] getBodyBytes(RequestPayload requestPayload) {
-        // todo 针对不同的消息类型做不通的处理
+        // 针对不同的消息类型做不通的处理
+        if(requestPayload == null) {
+            return new byte[0];
+        }
         // 序列化和压缩
         try {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

@@ -16,4 +16,5 @@ public class MessageFormatConstant {
     public static final int HEADER_FIELD_LENGTH = 2;
     // 总长度占用的字节数
     public static final int FULL_FIELD_LENGTH = 4;
+    public static final int MAGIC_LENGTH = 4;
 }
