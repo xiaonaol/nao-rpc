@@ -1,24 +1,20 @@
 package org.example;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import org.example.channelHandler.handler.MethodCallHandler;
-import org.example.channelHandler.handler.NrpcMessageDecoder;
+import org.example.channelHandler.handler.NrpcRequestDecoder;
+import org.example.channelHandler.handler.NrpcResponseEncoder;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.security.Provider;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,9 +152,10 @@ public class NrpcBootstrap {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             // 是核心，我们需要添加很多入站和出站的handler
                             socketChannel.pipeline().addLast(new LoggingHandler())
-                                    .addLast(new NrpcMessageDecoder())
+                                    .addLast(new NrpcRequestDecoder())
                                     // 根据请求进行方法调用
-                                    .addLast(new MethodCallHandler());
+                                    .addLast(new MethodCallHandler())
+                                    .addLast(new NrpcResponseEncoder());
                         }
                     });
 

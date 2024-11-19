@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
-import org.example.NrpcBootstrap;
 import org.example.enumeration.RequestType;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcRequest;
@@ -13,16 +12,15 @@ import org.example.transport.message.RequestPayload;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 /**
  * @author xiaonaol
  * @date 2024/11/16
  **/
 @Slf4j
-public class NrpcMessageDecoder extends LengthFieldBasedFrameDecoder {
+public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
-    public NrpcMessageDecoder() {
+    public NrpcRequestDecoder() {
         super(
                 // 找到当前报文的总长度，截取报文
                 // 最大帧长度，超过这个maxFrameLength会直接丢弃
@@ -108,6 +106,10 @@ public class NrpcMessageDecoder extends LengthFieldBasedFrameDecoder {
             nrpcRequest.setRequestPayload(requestPayload);
         } catch (IOException | ClassNotFoundException e) {
             log.error("请求【{}】反序列化时发生了异常", requestId, e);
+        }
+
+        if(log.isDebugEnabled()) {
+            log.debug("请求【{}】已经在服务端完成解码", nrpcRequest.getRequestId());
         }
 
         return nrpcRequest;

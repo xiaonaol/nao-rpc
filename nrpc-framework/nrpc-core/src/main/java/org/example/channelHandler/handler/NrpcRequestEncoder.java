@@ -12,7 +12,6 @@ import org.example.transport.message.RequestPayload;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * magic       4B   ----> nrpc.getBytes()
@@ -31,7 +30,7 @@ import java.nio.charset.StandardCharsets;
  * @date 2024/11/16
  **/
 @Slf4j
-public class NrpcMessageEncoder extends MessageToByteEncoder<NrpcRequest> {
+public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
 
     // 将nrpcRequest的内容写到byteBuf里
     @Override
@@ -79,6 +78,10 @@ public class NrpcMessageEncoder extends MessageToByteEncoder<NrpcRequest> {
 
         // 将写指针归位
         byteBuf.writerIndex(writerIndex);
+
+        if(log.isDebugEnabled()) {
+            log.debug("已完成报文的编码【{}】", nrpcRequest.getRequestId());
+        }
     }
 
     private byte[] getBodyBytes(RequestPayload requestPayload) {

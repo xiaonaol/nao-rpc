@@ -24,12 +24,16 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
 
         // 2. 根据payload内容进行方法调用
         Object object = callTargetMethod(requestPayload);
-        System.out.println(object + "!!!!!!!!!!!!");
+
+        if(log.isDebugEnabled()){
+            log.debug("【{}】已在服务端完成调用", nrpcRequest.getRequestId());
+        }
 
         // 3. 封装响应
 
+
         // 4. 写出响应
-        channelHandlerContext.writeAndFlush(object);
+        // todo why not "channelHandlerContext.writeAndFlush(object);" ?
         channelHandlerContext.channel().writeAndFlush(object);
     }
 
