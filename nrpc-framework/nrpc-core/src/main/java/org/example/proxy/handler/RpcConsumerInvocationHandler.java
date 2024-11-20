@@ -15,6 +15,7 @@ import org.example.discovery.Registry;
 import org.example.enumeration.RequestType;
 import org.example.exceptions.DiscoveryException;
 import org.example.exceptions.NetworkException;
+import org.example.serialize.SerializerFactory;
 import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.RequestPayload;
 
@@ -82,7 +83,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .requestId(NrpcBootstrap.idGenerator.getId())
                 .compressType((byte) 1)
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType((byte) 1)
+                .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getCode())
                 .requestPayload(requestPayload)
                 .build();
 

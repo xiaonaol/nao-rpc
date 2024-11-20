@@ -4,14 +4,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
+import org.example.NrpcBootstrap;
 import org.example.enumeration.RequestType;
+import org.example.serialize.Serializer;
+import org.example.serialize.SerializerFactory;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcRequest;
-import org.example.transport.message.RequestPayload;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 
 /**
  * magic       4B   ----> nrpc.getBytes()
@@ -62,7 +60,13 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         }
 
         // 写入请求体requestPayload
-        byte[] body = getBodyBytes(nrpcRequest.getRequestPayload());
+        // 1.根据配置的序列化方式进行序列化
+        // 实现序列化
+        Serializer serializer = SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getSerializer();
+        byte[] body = serializer.serialize(nrpcRequest.getRequestPayload());
+
+        // 2.根据配置的压缩方式进行压缩
+
         if(body != null) {
             byteBuf.writeBytes(body);
         }
@@ -84,21 +88,4 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         }
     }
 
-    private byte[] getBodyBytes(RequestPayload requestPayload) {
-        // 针对不同的消息类型做不通的处理
-        if(requestPayload == null) {
-            return new byte[0];
-        }
-        // 序列化和压缩
-        try {
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
-            outputStream.writeObject(requestPayload);
-
-            return byteArrayOutputStream.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化出现异常");
-            throw new RuntimeException(e);
-        }
-    }
 }

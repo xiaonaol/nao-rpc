@@ -39,6 +39,7 @@ public class NrpcBootstrap {
     private ProtocolConfig protocolConfig;
     private int port = 8088;
     public static final IdGenerator idGenerator = new IdGenerator(1, 2);
+    public static String SERIALIZE_TYPE = "jdk";
 
     // 注册中心
     private Registry registry;
@@ -186,6 +187,18 @@ public class NrpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
         reference.setRegistry(registry);
+        return this;
+    }
+
+    /**
+     * 配置序列化方式
+     * @param serializeType 序列化方式
+     */
+    public NrpcBootstrap serialize(String serializeType) {
+        SERIALIZE_TYPE = serializeType;
+        if(log.isDebugEnabled()) {
+            log.debug("我们配置了使用的序列化方式为【{}】", serializeType);
+        }
         return this;
     }
     /*

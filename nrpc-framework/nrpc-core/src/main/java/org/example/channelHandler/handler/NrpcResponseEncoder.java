@@ -5,6 +5,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.example.enumeration.RequestType;
+import org.example.serialize.Serializer;
+import org.example.serialize.SerializerFactory;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcResponse;
 import org.example.transport.message.RequestPayload;
@@ -38,8 +40,13 @@ public class NrpcResponseEncoder extends MessageToByteEncoder<NrpcResponse> {
 
         // 如果是心跳请求就不处理请求体 "ping" "pong"
 
-        // 写入请求体requestPayload
-        byte[] body = getBodyBytes(nrpcResponse.getBody());
+        // 对响应做序列化
+        Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
+                .getSerializeType()).getSerializer();
+        byte[] body = serializer.serialize(nrpcResponse.getBody());
+
+        // todo 压缩
+
         if(body != null) {
             byteBuf.writeBytes(body);
         }
@@ -58,24 +65,6 @@ public class NrpcResponseEncoder extends MessageToByteEncoder<NrpcResponse> {
 
         if(log.isDebugEnabled()){
             log.debug("响应【{}】已在服务端完成解码", nrpcResponse.getRequestId());
-        }
-    }
-
-    private byte[] getBodyBytes(Object body) {
-        // 针对不同的消息类型做不通的处理
-        if(body == null) {
-            return null;
-        }
-        // 序列化和压缩
-        try {
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
-            outputStream.writeObject(body);
-
-            return byteArrayOutputStream.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化出现异常");
-            throw new RuntimeException(e);
         }
     }
 }
