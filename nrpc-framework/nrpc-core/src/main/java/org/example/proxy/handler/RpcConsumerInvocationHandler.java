@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.server.Request;
+import org.example.IdGenerator;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.discovery.Registry;
@@ -78,7 +79,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // TODO 需要对各种请求id和各种类型做区分
         NrpcRequest nrpcRequest = NrpcRequest.builder()
-                .requestId(1L)
+                .requestId(NrpcBootstrap.idGenerator.getId())
                 .compressType((byte) 1)
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType((byte) 1)
