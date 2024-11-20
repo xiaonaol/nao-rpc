@@ -84,6 +84,7 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
 
         // 我们需要封装
         NrpcResponse nrpcResponse = new NrpcResponse();
+        nrpcResponse.setRequestId(requestId);
         nrpcResponse.setCode(responseCode);
         nrpcResponse.setSerializeType(serializeType);
         nrpcResponse.setCompressType(compressType);
