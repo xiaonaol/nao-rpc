@@ -7,6 +7,7 @@ import org.example.discovery.RegistryConfig;
  * @author xiaonaol
  * @date 2024/10/27
  **/
+@Slf4j
 public class ConsumerApplication {
     public static void main(String[] args) {
         // 想尽一切办法获取代理对象，使用ReferenceConfig进行封装
@@ -29,5 +30,6 @@ public class ConsumerApplication {
         // 获取一个代理对象
         HelloNrpc helloNrpc = reference.get();
         String sayHi = helloNrpc.sayHello("Hello!");
+        log.info("sayHi --> {}", sayHi);
     }
 }

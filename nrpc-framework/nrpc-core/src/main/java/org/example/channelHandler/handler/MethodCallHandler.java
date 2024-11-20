@@ -5,7 +5,9 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
 import org.example.ServiceConfig;
+import org.example.enumeration.RespCode;
 import org.example.transport.message.NrpcRequest;
+import org.example.transport.message.NrpcResponse;
 import org.example.transport.message.RequestPayload;
 
 import java.lang.reflect.InvocationTargetException;
@@ -30,11 +32,16 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
         }
 
         // 3. 封装响应
-
+        NrpcResponse nrpcResponse = new NrpcResponse();
+        nrpcResponse.setCode(RespCode.SUCCESS.getCode());
+        nrpcResponse.setRequestId(nrpcRequest.getRequestId());
+        nrpcResponse.setCompressType(nrpcRequest.getCompressType());
+        nrpcResponse.setSerializeType(nrpcRequest.getSerializeType());
+        nrpcResponse.setBody(object);
 
         // 4. 写出响应
-        // todo why not "channelHandlerContext.writeAndFlush(object);" ?
-        channelHandlerContext.channel().writeAndFlush(object);
+        // todo why not "channelHandlerContext.writeAndFlush(nrpcResponse);" ?
+        channelHandlerContext.channel().writeAndFlush(nrpcResponse);
     }
 
     private Object callTargetMethod(RequestPayload requestPayload) {

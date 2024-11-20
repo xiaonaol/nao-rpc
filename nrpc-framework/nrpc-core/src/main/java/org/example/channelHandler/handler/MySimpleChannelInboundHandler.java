@@ -3,6 +3,7 @@ package org.example.channelHandler.handler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
 import org.example.transport.message.NrpcResponse;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * @author xiaonaol
  * @date 2024/11/4
  **/
+@Slf4j
 public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<NrpcResponse> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, NrpcResponse nrpcResponse) throws Exception {
@@ -22,5 +24,8 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<N
         // 从全局挂起的请求中寻找与之匹配的completableFuture
         CompletableFuture<Object> completableFuture = NrpcBootstrap.PENDING_QUEST.get(1L);
         completableFuture.complete(returnValue);
+        if(log.isDebugEnabled()){
+            log.debug("已寻找到编号为【{}】的completableFuture结果", nrpcResponse.getRequestId());
+        }
     }
 }
