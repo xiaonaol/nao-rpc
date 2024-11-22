@@ -25,6 +25,7 @@
         <logback.version>1.2.13</logback.version>
         <fastjson2.version>2.0.34</fastjson2.version>
         <lombok.version>1.18.26</lombok.version>
+        <hessian.version>4.0.66</hessian.version>
     </properties>
 
     <!-- 父工程版本管理 -->
@@ -74,6 +75,12 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.caucho</groupId>
+                <artifactId>hessian</artifactId>
+                <version>${hessian.version}</version>
             </dependency>
 
         </dependencies>

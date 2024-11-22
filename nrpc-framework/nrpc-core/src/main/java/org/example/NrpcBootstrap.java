@@ -39,7 +39,7 @@ public class NrpcBootstrap {
     private ProtocolConfig protocolConfig;
     private int port = 8088;
     public static final IdGenerator idGenerator = new IdGenerator(1, 2);
-    public static String SERIALIZE_TYPE = "jdk";
+    public static String SERIALIZE_TYPE = "hessian";
 
     // 注册中心
     private Registry registry;

@@ -24,7 +24,7 @@ public class ConsumerApplication {
         NrpcBootstrap.getInstance()
                 .application("first-nrpc-consumer")
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
-                .serialize("jdk")
+                .serialize("hessian")
                 // 把注册中心以及调用方配置项传递给reference
                 .reference(reference);
 

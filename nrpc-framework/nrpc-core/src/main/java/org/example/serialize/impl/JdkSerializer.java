@@ -22,6 +22,7 @@ public class JdkSerializer implements Serializer {
             ObjectOutputStream oos = new ObjectOutputStream(baos);
         ) {
             oos.writeObject(object);
+            log.info("使用jdk序列化");
             return baos.toByteArray();
         } catch (IOException e) {
             log.error("jdk序列化对象【{}】出现异常", object);
@@ -38,6 +39,7 @@ public class JdkSerializer implements Serializer {
         try(ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bais);
         ) {
+            log.info("使用jdk反序列化");
             return (T) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             log.error("jdk反序列化对象【{}】出现异常", clazz);
