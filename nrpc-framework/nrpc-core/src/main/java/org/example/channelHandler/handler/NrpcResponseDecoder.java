@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
+import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.enumeration.RequestType;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
@@ -72,7 +74,7 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 4、解析总长度
         int fullLength = byteBuf.readInt();
 
-        // 5、请求类型 todo 判断是不是心跳检测
+        // 5、请求类型 判断是不是心跳检测
         byte responseCode = byteBuf.readByte();
 
         // 6、序列化类型
@@ -91,19 +93,21 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         nrpcResponse.setSerializeType(serializeType);
         nrpcResponse.setCompressType(compressType);
 
-        // todo 心跳请求没有负载，直接返回
-        if(responseCode == RequestType.HEART_BEAT.getId()) {
-            return nrpcResponse;
-        }
+        // 心跳请求没有负载，直接返回
+//        if(responseCode == RequestType.HEART_BEAT.getId()) {
+//            return nrpcResponse;
+//        }
 
         int bodyLength = fullLength - headLength;
         byte[] payload = new byte[bodyLength];
         byteBuf.readBytes(payload);
 
         // 有了payload字节数组后，就可以解压缩反序列化
-        // todo 解压缩
+        // 1. 解压缩
+        Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+        payload = compressor.decompress(payload);
 
-        // todo 反序列化
+        // 2. 反序列化
         Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
                 .getSerializeType()).getSerializer();
         Object body = serializer.deserialize(payload, Object.class);

@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
+import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.enumeration.RequestType;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
@@ -40,12 +42,14 @@ public class NrpcResponseEncoder extends MessageToByteEncoder<NrpcResponse> {
 
         // 如果是心跳请求就不处理请求体 "ping" "pong"
 
-        // 对响应做序列化
+        // 1. 对响应做序列化
         Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
                 .getSerializeType()).getSerializer();
         byte[] body = serializer.serialize(nrpcResponse.getBody());
 
-        // todo 压缩
+        // 2. 压缩
+        Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+        body = compressor.compress(body);
 
         if(body != null) {
             byteBuf.writeBytes(body);

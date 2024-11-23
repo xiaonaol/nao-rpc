@@ -40,6 +40,7 @@ public class NrpcBootstrap {
     private int port = 8088;
     public static final IdGenerator idGenerator = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "hessian";
+    public static String COMPRESS_TYPE = "gzip";
 
     // 注册中心
     private Registry registry;
@@ -201,6 +202,16 @@ public class NrpcBootstrap {
         }
         return this;
     }
+
+    public NrpcBootstrap compress(String compressType) {
+        COMPRESS_TYPE = compressType;
+        if(log.isDebugEnabled()) {
+            log.debug("我们配置了使用的压缩算法为【{}】", compressType);
+        }
+        return this;
+    }
+
+
     /*
      * ----------------------------服务核心api--------------------------------
      */

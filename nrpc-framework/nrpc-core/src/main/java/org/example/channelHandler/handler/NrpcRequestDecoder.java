@@ -4,7 +4,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
+import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.enumeration.RequestType;
+import org.example.exceptions.CompressException;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
 import org.example.serialize.SerializerWrapper;
@@ -101,14 +104,14 @@ public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         byteBuf.readBytes(payload);
 
         // 有了payload字节数组后，就可以解压缩反序列化
-        // todo 解压缩
+        // 1. 解压缩
+        Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
+        payload = compressor.decompress(payload);
 
-        // todo 反序列化
+        // 2. 反序列化
         // 1 --> jdk
-        System.out.println(serializeType);
         Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
         RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
-
         nrpcRequest.setRequestPayload(requestPayload);
 
         if(log.isDebugEnabled()) {

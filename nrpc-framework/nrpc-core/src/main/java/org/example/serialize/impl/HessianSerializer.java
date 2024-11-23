@@ -52,7 +52,7 @@ public class HessianSerializer implements Serializer {
             }
             return t;
         } catch (IOException e) {
-            log.error("jdk反序列化对象【{}】出现异常", clazz);
+            log.error("hessian反序列化对象【{}】出现异常", clazz);
             throw new SerializeException(e);
         }
     }

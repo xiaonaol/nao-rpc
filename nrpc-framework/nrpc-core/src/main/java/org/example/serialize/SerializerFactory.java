@@ -1,5 +1,6 @@
 package org.example.serialize;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.serialize.impl.HessianSerializer;
 import org.example.serialize.impl.JdkSerializer;
 import org.example.serialize.impl.JsonSerializer;
@@ -10,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author xiaonaol
  * @date 2024/11/20
  **/
+@Slf4j
 public class SerializerFactory {
     private final static ConcurrentHashMap<String, SerializerWrapper> SERIALIZER_CACHE = new ConcurrentHashMap<>();
     private final static ConcurrentHashMap<Byte, SerializerWrapper> SERIALIZER_CACHE_CODE = new ConcurrentHashMap<>();
@@ -33,10 +35,20 @@ public class SerializerFactory {
      * @return 序列化包装类
      */
     public static SerializerWrapper getSerializer(String serializeType) {
-        return SERIALIZER_CACHE.get(serializeType);
+        SerializerWrapper serializerWrapper = SERIALIZER_CACHE.get(serializeType);
+        if(serializerWrapper == null) {
+            log.info("获取序列化类型失败，使用默认序列化方式hessian");
+            return SERIALIZER_CACHE.get("hessian");
+        }
+        return serializerWrapper;
     }
 
     public static SerializerWrapper getSerializer(byte serializeCode) {
-        return SERIALIZER_CACHE_CODE.get(serializeCode);
+        SerializerWrapper serializerWrapper = SERIALIZER_CACHE_CODE.get(serializeCode);
+        if(serializerWrapper == null) {
+            log.info("获取序列化类型失败，使用默认序列化方式hessian");
+            return SERIALIZER_CACHE_CODE.get((byte) 3);
+        }
+        return serializerWrapper;
     }
 }

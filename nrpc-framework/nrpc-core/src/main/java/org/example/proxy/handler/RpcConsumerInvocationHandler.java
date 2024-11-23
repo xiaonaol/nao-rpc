@@ -11,6 +11,7 @@ import org.apache.zookeeper.server.Request;
 import org.example.IdGenerator;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
+import org.example.compress.CompressorFactory;
 import org.example.discovery.Registry;
 import org.example.enumeration.RequestType;
 import org.example.exceptions.DiscoveryException;
@@ -78,10 +79,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .returnType(method.getReturnType())
                 .build();
 
-        // TODO 需要对各种请求id和各种类型做区分
+        // 需要对各种请求id和各种类型做区分
         NrpcRequest nrpcRequest = NrpcRequest.builder()
                 .requestId(NrpcBootstrap.idGenerator.getId())
-                .compressType((byte) 1)
+                .compressType(CompressorFactory.getCompressor(NrpcBootstrap.COMPRESS_TYPE).getCode())
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getCode())
                 .requestPayload(requestPayload)

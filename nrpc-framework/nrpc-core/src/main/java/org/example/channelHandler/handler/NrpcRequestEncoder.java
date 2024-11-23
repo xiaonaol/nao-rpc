@@ -5,6 +5,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
+import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.enumeration.RequestType;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
@@ -66,6 +68,8 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         byte[] body = serializer.serialize(nrpcRequest.getRequestPayload());
 
         // 2.根据配置的压缩方式进行压缩
+        Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
+        body = compressor.compress(body);
 
         if(body != null) {
             byteBuf.writeBytes(body);
