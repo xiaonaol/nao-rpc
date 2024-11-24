@@ -53,9 +53,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         log.info("method-->{}", method.getName());
         log.info("args-->{}", args);
 
-        // 1、发现服务，从注册中心，寻找一个可用的服务
+        // 1、选择一个负载均衡器
+
         // 传入服务的名字,返回ip+端口
-        InetSocketAddress address = registry.lookup(interfaceRef.getName());
+        InetSocketAddress address = NrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
         if (log.isDebugEnabled()) {
             log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
                     interfaceRef.getName(), address);
@@ -88,7 +89,8 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .requestPayload(requestPayload)
                 .build();
 
-
+        // 将请求存入本地线程，需要在和是的时候remove
+        NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
         /*
          * ------------------异步策略-------------------------
          */

@@ -11,6 +11,9 @@ import org.example.channelHandler.handler.NrpcRequestDecoder;
 import org.example.channelHandler.handler.NrpcResponseEncoder;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
+import org.example.loadbalancer.LoadBalancer;
+import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
+import org.example.transport.message.NrpcRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +41,16 @@ public class NrpcBootstrap {
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
     private int port = 8088;
+    public static final int PORT = 8088;
     public static final IdGenerator idGenerator = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "hessian";
     public static String COMPRESS_TYPE = "gzip";
 
+    public static final ThreadLocal<NrpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
+
     // 注册中心
     private Registry registry;
+    public static LoadBalancer LOAD_BALANCER;
 
     // 维护已经发布且暴露的服务列表 key -> interface的全限定名
     public static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
@@ -83,8 +90,9 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap registry(RegistryConfig registryConfig) {
-
         this.registry = registryConfig.getRegistry();
+        // todo 需要修改
+        NrpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
         return this;
     }
 
@@ -163,7 +171,7 @@ public class NrpcBootstrap {
                     });
 
             // 4、绑定端口
-            ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
+            ChannelFuture channelFuture = serverBootstrap.bind(PORT).sync();
 
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e){
@@ -209,6 +217,10 @@ public class NrpcBootstrap {
             log.debug("我们配置了使用的压缩算法为【{}】", compressType);
         }
         return this;
+    }
+
+    public Registry getRegistry() {
+        return registry;
     }
 
 

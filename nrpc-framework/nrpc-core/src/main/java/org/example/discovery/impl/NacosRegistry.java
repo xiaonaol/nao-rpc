@@ -11,6 +11,7 @@ import org.example.utils.zookeeper.ZookeeperNode;
 import org.example.utils.zookeeper.ZookeeperUtils;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * @author xiaonaol
@@ -55,7 +56,7 @@ public class NacosRegistry extends AbstractRegistry {
     }
 
     @Override
-    public InetSocketAddress lookup(String name) {
+    public List<InetSocketAddress> lookup(String name) {
         return null;
     }
 }

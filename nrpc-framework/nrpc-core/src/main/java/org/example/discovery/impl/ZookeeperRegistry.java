@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooKeeper;
 import org.example.Constant;
+import org.example.NrpcBootstrap;
 import org.example.ServiceConfig;
 import org.example.discovery.AbstractRegistry;
 import org.example.exceptions.DiscoveryException;
@@ -48,7 +49,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         // 服务提供方的端口一般自己设定，我们还需要一个获取ip的方法
         // ip我们通常需要一个局域网ip，不是127.0.0.1
         // todo: 后续处理端口问题
-        String node = parentNode + "/" + NetUtils.getIp() + ":" + 8088;
+        String node = parentNode + "/" + NetUtils.getIp() + ":" + NrpcBootstrap.PORT;
         if(!ZookeeperUtils.exists(zooKeeper, node, null)) {
             ZookeeperNode zookeeperNode = new ZookeeperNode(node, null);
             ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.EPHEMERAL);
@@ -60,7 +61,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
 
     @Override
-    public InetSocketAddress lookup(String serviceName) {
+    public List<InetSocketAddress> lookup(String serviceName) {
 
         // 1. 找到服务对应的节点
         String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
@@ -80,6 +81,6 @@ public class ZookeeperRegistry extends AbstractRegistry {
             throw new DiscoveryException("未发现任何可用的服务主机");
         }
 
-        return inetSocketAddresses.get(0);
+        return inetSocketAddresses;
     }
 }

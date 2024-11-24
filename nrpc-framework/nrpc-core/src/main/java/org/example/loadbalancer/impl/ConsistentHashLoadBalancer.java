@@ -1,0 +1,74 @@
+package org.example.loadbalancer.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.example.exceptions.LoadBalancerException;
+import org.example.loadbalancer.AbstractLoadBalancer;
+import org.example.loadbalancer.Selector;
+
+import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * 轮询的负载均衡策略
+ * @author xiaonaol
+ * @date 2024/11/24
+ **/
+@Slf4j
+public class ConsistentHashLoadBalancer extends AbstractLoadBalancer{
+
+    @Override
+    protected Selector getSelector(List<InetSocketAddress> serviceList) {
+        return new ConsistentHashSelector(serviceList, 128);
+    }
+
+    /**
+     * 一致性hash的具体算法实现
+     */
+    private static class ConsistentHashSelector implements Selector {
+
+        // hash环用来存储服务器节点
+        private SortedMap<Integer, InetSocketAddress> circle = new TreeMap<>();
+        // 虚拟节点的个数
+        private int virtualNodes;
+
+        public ConsistentHashSelector(List<InetSocketAddress> serviceList, int virtualNodes) {
+            // 将节点转化为虚拟节点，进行挂载
+            this.virtualNodes = virtualNodes;
+            for(InetSocketAddress inetSocketAddress: serviceList) {
+                // 需要把每一个节点加入到hash环中
+                addNodeToCircle(inetSocketAddress);
+            }
+        }
+
+        private int hash(String s) {
+
+        }
+
+        @Override
+        public InetSocketAddress getNext() {
+            // 1、hash环已经建立，接下来要对请求的要素做处理
+
+
+            return address;
+        }
+
+        /**
+         * 将每个接待你挂载到hash环上
+         * @param inetSocketAddress 节点地址
+         */
+        private void addNodeToCircle(InetSocketAddress inetSocketAddress) {
+            // 为每一个节点生成匹配的虚拟节点进行挂载
+            for(int i = 0; i < virtualNodes; i++) {
+                int hash = hash(inetSocketAddress + "-" + i);
+                // 挂载到hash环上
+                circle.put(hash, inetSocketAddress);
+            }
+        }
+
+        @Override
+        public void reBalance() {
+
+        }
+    }
+}

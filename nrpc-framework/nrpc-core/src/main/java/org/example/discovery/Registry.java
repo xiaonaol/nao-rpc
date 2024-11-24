@@ -3,6 +3,7 @@ package org.example.discovery;
 import org.example.ServiceConfig;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * 注册中心
@@ -24,5 +25,5 @@ public interface Registry {
      * @return 服务的地址
      * @author xiaonaol
      */
-    InetSocketAddress lookup(String serviceName);
+    List<InetSocketAddress> lookup(String serviceName);
 }
