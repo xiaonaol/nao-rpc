@@ -48,27 +48,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        // 我们调用saHi方法，事实上会走进这个代码段中
-        // 我们已经知道 method（具体的方法），args(参数列表)
-        log.info("method-->{}", method.getName());
-        log.info("args-->{}", args);
 
-        // 1、选择一个负载均衡器
-
-        // 传入服务的名字,返回ip+端口
-        InetSocketAddress address = NrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
-        if (log.isDebugEnabled()) {
-            log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
-                    interfaceRef.getName(), address);
-        }
-
-        // 2、尝试获取一个可用通道
-        Channel channel = getAvailableChannel(address);
-        if(log.isDebugEnabled()) {
-            log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
-        }
-
-        // 3、
         /*
          * ------------------ 封装报文 ---------------------------
          */
@@ -89,8 +69,24 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .requestPayload(requestPayload)
                 .build();
 
-        // 将请求存入本地线程，需要在和是的时候remove
+        // 将请求存入本地线程，需要在合适的时候调用remove方法
         NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
+
+        // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
+        // 传入服务的名字,返回ip+端口
+
+        InetSocketAddress address = NrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
+        if (log.isDebugEnabled()) {
+            log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
+                    interfaceRef.getName(), address);
+        }
+
+        // 3、尝试获取一个可用通道
+        Channel channel = getAvailableChannel(address);
+        if(log.isDebugEnabled()) {
+            log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
+        }
+
         /*
          * ------------------异步策略-------------------------
          */
@@ -108,9 +104,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 completableFuture.completeExceptionally(promise.cause());
             }
         });
-//
-        // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
-        // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果
+
+        // 清理ThreadLocal
+        NrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
 
         // 阻塞等待在pipeline中handler最后执行complete方法
         // 5、获得响应的结果
