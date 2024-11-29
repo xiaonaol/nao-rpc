@@ -46,7 +46,7 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer{
         }
 
         /**
-         * 具体的hash算法
+         * 具体的hash算法 todo 需要改进
          * @param s
          * @return hash值
          */
@@ -62,8 +62,11 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer{
 
             int res = 0;
             for(int i = 0; i < 4; i++) {
-                int middle = digest[i] << ((3 - i) * 8);
-                res = res | middle;
+                res = res << 8;
+                if(digest[i] < 0) {
+                    res = res | (digest[i] & 255);
+                }
+                res = res | digest[i];
             }
 
             return res;
@@ -124,6 +127,17 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer{
         @Override
         public void reBalance() {
 
+        }
+
+        private String toBinary(int i) {
+            String s = Integer.toBinaryString(i);
+            int index = 32 - s.length();
+            StringBuilder sb = new StringBuilder(s);
+            for(int j = 0; j < index; j ++ ) {
+                sb.append(0);
+            }
+            sb.append(s);
+            return sb.toString();
         }
     }
 }
