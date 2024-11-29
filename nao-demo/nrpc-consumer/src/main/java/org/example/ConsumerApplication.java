@@ -1,7 +1,11 @@
 package org.example;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.core.HeartbeatDetector;
 import org.example.discovery.RegistryConfig;
+
+import java.security.Provider;
+import java.util.Map;
 
 /**
  * @author xiaonaol
@@ -31,7 +35,9 @@ public class ConsumerApplication {
 
         // 获取一个代理对象
         HelloNrpc helloNrpc = reference.get();
-        String sayHi = helloNrpc.sayHello("Hello");
-        log.info("sayHi --> {}", sayHi);
+        for (int i = 0; i < 10; i++) {
+            String sayHi = helloNrpc.sayHello("Hello");
+            log.info("sayHi --> {}", sayHi);
+        }
     }
 }

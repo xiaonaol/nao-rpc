@@ -8,7 +8,7 @@ public class MessageFormatConstant {
     public final static byte[] MAGIC = "nrpc".getBytes();
     public final static int VERSION = 1;
     // 头部信息的长度
-    public final static short HEADER_LENGTH = (short) (MAGIC.length + 1 + 2 + 4 + 1 + 1 + 1 + 8);
+    public final static short HEADER_LENGTH = (short) (MAGIC.length + 1 + 2 + 4 + 1 + 1 + 1 + 8 + 8);
 
     public final static int MAX_FRAME_LENGTH = 1024 * 1024;
     public static final int VERSION_LENGTH = 1;

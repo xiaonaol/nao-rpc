@@ -44,7 +44,6 @@ public class HessianSerializer implements Serializer {
 
         try(ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
         ) {
-            log.info("使用hessian反序列化");
             Hessian2Input hessianInput = new Hessian2Input(bais);
             T t = (T) hessianInput.readObject();
             if(log.isDebugEnabled()) {

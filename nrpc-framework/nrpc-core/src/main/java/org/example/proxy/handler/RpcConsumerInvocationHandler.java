@@ -1,14 +1,9 @@
 package org.example.proxy.handler;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.server.Request;
-import org.example.IdGenerator;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.compress.CompressorFactory;
@@ -23,6 +18,7 @@ import org.example.transport.message.RequestPayload;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -62,10 +58,11 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // 需要对各种请求id和各种类型做区分
         NrpcRequest nrpcRequest = NrpcRequest.builder()
-                .requestId(NrpcBootstrap.idGenerator.getId())
+                .requestId(NrpcBootstrap.ID_GENERATOR.getId())
                 .compressType(CompressorFactory.getCompressor(NrpcBootstrap.COMPRESS_TYPE).getCode())
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getCode())
+                .timeStamp(new Date().getTime())
                 .requestPayload(requestPayload)
                 .build();
 
@@ -94,7 +91,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         // 4、写出报文
         CompletableFuture<Object> completableFuture = new CompletableFuture<>();
         // 将completableFuture暴露
-        NrpcBootstrap.PENDING_QUEST.put(1L, completableFuture);
+        NrpcBootstrap.PENDING_QUEST.put(nrpcRequest.getRequestId(), completableFuture);
 
         // 这里直接writeAndFlush写出了一个请求，这个请求的实例就会进入pipline执行出站的一系列操作
         // 我们可以想象到，第一个出站程序一定是将 nrpcRequest -> 二进制报文

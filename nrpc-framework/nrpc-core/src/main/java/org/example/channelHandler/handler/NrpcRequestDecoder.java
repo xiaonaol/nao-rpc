@@ -87,12 +87,17 @@ public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        // 9、时间戳
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         NrpcRequest nrpcRequest = new NrpcRequest();
         nrpcRequest.setRequestId(requestId);
         nrpcRequest.setSerializeType(serializeType);
         nrpcRequest.setCompressType(compressType);
         nrpcRequest.setRequestType(requestType);
+        nrpcRequest.setTimeStamp(timeStamp);
+
 
         // 心跳请求没有负载，直接返回
         if(requestType == RequestType.HEART_BEAT.getId()) {
@@ -105,14 +110,15 @@ public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
         // 有了payload字节数组后，就可以解压缩反序列化
         // 1. 解压缩
-        Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
-        payload = compressor.decompress(payload);
+        if(payload.length > 0) {
+            Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
+            payload = compressor.decompress(payload);
 
-        // 2. 反序列化
-        // 1 --> jdk
-        Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
-        RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
-        nrpcRequest.setRequestPayload(requestPayload);
+            // 2. 反序列化
+            Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
+            RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+            nrpcRequest.setRequestPayload(requestPayload);
+        }
 
         if(log.isDebugEnabled()) {
             log.debug("请求【{}】已经在服务端完成解码", nrpcRequest.getRequestId());

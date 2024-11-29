@@ -5,6 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
 import org.example.ServiceConfig;
+import org.example.enumeration.RequestType;
 import org.example.enumeration.RespCode;
 import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.NrpcResponse;
@@ -25,10 +26,14 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
         RequestPayload requestPayload = nrpcRequest.getRequestPayload();
 
         // 2. 根据payload内容进行方法调用
-        Object object = callTargetMethod(requestPayload);
+        Object result = null;
+        System.out.println(nrpcRequest.getRequestType());
+        if(!(nrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId())) {
+            result = callTargetMethod(requestPayload);
 
-        if(log.isDebugEnabled()){
-            log.debug("【{}】已在服务端完成调用", nrpcRequest.getRequestId());
+            if(log.isDebugEnabled()){
+                log.debug("【{}】已在服务端完成调用", nrpcRequest.getRequestId());
+            }
         }
 
         // 3. 封装响应
@@ -37,7 +42,7 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
         nrpcResponse.setRequestId(nrpcRequest.getRequestId());
         nrpcResponse.setCompressType(nrpcRequest.getCompressType());
         nrpcResponse.setSerializeType(nrpcRequest.getSerializeType());
-        nrpcResponse.setBody(object);
+        nrpcResponse.setBody(result);
 
         // 4. 写出响应
         // todo why not "channelHandlerContext.writeAndFlush(nrpcResponse);" ?

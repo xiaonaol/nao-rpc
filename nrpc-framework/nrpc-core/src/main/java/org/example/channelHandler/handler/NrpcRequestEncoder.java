@@ -49,6 +49,7 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         byteBuf.writeByte(nrpcRequest.getCompressType());
         // 8字节的请求id
         byteBuf.writeLong(nrpcRequest.getRequestId());
+        byteBuf.writeLong(nrpcRequest.getTimeStamp());
 
         // 如果是心跳请求就不处理请求体
         if(nrpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()) {
@@ -64,12 +65,15 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         // 写入请求体requestPayload
         // 1.根据配置的序列化方式进行序列化
         // 实现序列化
-        Serializer serializer = SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getSerializer();
-        byte[] body = serializer.serialize(nrpcRequest.getRequestPayload());
+        byte[] body = null;
+        if (nrpcRequest.getRequestPayload() != null) {
+            Serializer serializer = SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getSerializer();
+            body = serializer.serialize(nrpcRequest.getRequestPayload());
 
-        // 2.根据配置的压缩方式进行压缩
-        Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
-        body = compressor.compress(body);
+            // 2.根据配置的压缩方式进行压缩
+            Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
+            body = compressor.compress(body);
+        }
 
         if(body != null) {
             byteBuf.writeBytes(body);

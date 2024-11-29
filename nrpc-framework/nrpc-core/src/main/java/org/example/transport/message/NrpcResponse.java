@@ -26,6 +26,8 @@ public class NrpcResponse {
     private byte compressType;
     private byte serializeType;
 
+    private long timeStamp;
+
     // 具体的消息体
     private Object body;
 

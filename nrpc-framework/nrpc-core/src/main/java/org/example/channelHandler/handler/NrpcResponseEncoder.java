@@ -39,17 +39,21 @@ public class NrpcResponseEncoder extends MessageToByteEncoder<NrpcResponse> {
         byteBuf.writeByte(nrpcResponse.getCompressType());
         // 8字节的请求id
         byteBuf.writeLong(nrpcResponse.getRequestId());
+        byteBuf.writeLong(nrpcResponse.getTimeStamp());
 
         // 如果是心跳请求就不处理请求体 "ping" "pong"
 
         // 1. 对响应做序列化
-        Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
-                .getSerializeType()).getSerializer();
-        byte[] body = serializer.serialize(nrpcResponse.getBody());
+        byte[] body = null;
+        if(nrpcResponse.getBody() != null) {
+            Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
+                    .getSerializeType()).getSerializer();
+            body = serializer.serialize(nrpcResponse.getBody());
 
-        // 2. 压缩
-        Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
-        body = compressor.compress(body);
+            // 2. 压缩
+            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+            body = compressor.compress(body);
+        }
 
         if(body != null) {
             byteBuf.writeBytes(body);

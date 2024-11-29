@@ -17,6 +17,7 @@ import org.example.transport.message.RequestPayload;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Date;
 
 /**
  * @author xiaonaol
@@ -43,7 +44,6 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        log.info("开始解码报文……");
         Object decode = super.decode(ctx, in);
         if(decode instanceof ByteBuf byteBuf){
             return decodeFrame(byteBuf);
@@ -86,12 +86,16 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        // 9、时间戳
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         NrpcResponse nrpcResponse = new NrpcResponse();
         nrpcResponse.setRequestId(requestId);
         nrpcResponse.setCode(responseCode);
         nrpcResponse.setSerializeType(serializeType);
         nrpcResponse.setCompressType(compressType);
+        nrpcResponse.setTimeStamp(new Date().getTime());
 
         // 心跳请求没有负载，直接返回
 //        if(responseCode == RequestType.HEART_BEAT.getId()) {
@@ -104,14 +108,16 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
 
         // 有了payload字节数组后，就可以解压缩反序列化
         // 1. 解压缩
-        Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
-        payload = compressor.decompress(payload);
+        if(payload.length > 0) {
+            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+            payload = compressor.decompress(payload);
 
-        // 2. 反序列化
-        Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
-                .getSerializeType()).getSerializer();
-        Object body = serializer.deserialize(payload, Object.class);
-        nrpcResponse.setBody(body);
+            // 2. 反序列化
+            Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
+                    .getSerializeType()).getSerializer();
+            Object body = serializer.deserialize(payload, Object.class);
+            nrpcResponse.setBody(body);
+        }
 
         if(log.isDebugEnabled()){
             log.debug("响应【{}】已在调用端完成解码", nrpcResponse.getRequestId());

@@ -9,9 +9,11 @@ import io.netty.handler.logging.LoggingHandler;
 import org.example.channelHandler.handler.MethodCallHandler;
 import org.example.channelHandler.handler.NrpcRequestDecoder;
 import org.example.channelHandler.handler.NrpcResponseEncoder;
+import org.example.core.HeartbeatDetector;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
+import org.example.loadbalancer.impl.MinimumResponseTimeLoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.transport.message.NrpcRequest;
 import org.slf4j.Logger;
@@ -21,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,9 +43,8 @@ public class NrpcBootstrap {
     private String appName = "default";
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    private int port = 8088;
-    public static final int PORT = 8088;
-    public static final IdGenerator idGenerator = new IdGenerator(1, 2);
+    public static final int PORT = 8089;
+    public static final IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "hessian";
     public static String COMPRESS_TYPE = "gzip";
 
@@ -56,7 +58,7 @@ public class NrpcBootstrap {
     public static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
 
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
-
+    public static final TreeMap<Long, Channel> ANSWER_TIME_CHANNEL_CACHE = new TreeMap<>();
     // 定义全局的对外挂起的 completableFuture
     public final static Map<Long, CompletableFuture<Object>> PENDING_QUEST = new ConcurrentHashMap<>(128);
 
@@ -92,7 +94,7 @@ public class NrpcBootstrap {
     public NrpcBootstrap registry(RegistryConfig registryConfig) {
         this.registry = registryConfig.getRegistry();
         // todo 需要修改
-        NrpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
+        NrpcBootstrap.LOAD_BALANCER = new MinimumResponseTimeLoadBalancer();
         return this;
     }
 
@@ -192,6 +194,10 @@ public class NrpcBootstrap {
      */
 
     public NrpcBootstrap reference(ReferenceConfig<?> reference) {
+
+        // 开启对这个服务的心跳检测
+        HeartbeatDetector.detectHeartbeat(reference.getInterface().getName());
+
         // 在这个方法里是否可以拿到相关配置项
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
