@@ -67,7 +67,7 @@ public class NrpcRequestEncoder extends MessageToByteEncoder<NrpcRequest> {
         // 实现序列化
         byte[] body = null;
         if (nrpcRequest.getRequestPayload() != null) {
-            Serializer serializer = SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getSerializer();
+            Serializer serializer = SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getSerializer();
             body = serializer.serialize(nrpcRequest.getRequestPayload());
 
             // 2.根据配置的压缩方式进行压缩

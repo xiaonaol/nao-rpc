@@ -27,7 +27,7 @@ public class OnlineAndOfflineWatcher implements Watcher {
             log.info("检测到节点【{}】上/下线，将重新拉取服务列表...", event.getPath());
 
             String serviceName = getServiceName(event.getPath());
-            Registry registry = NrpcBootstrap.getInstance().getRegistry();
+            Registry registry = NrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry();
             List<InetSocketAddress> addresses = registry.lookup(serviceName);
             // 处理新增的节点
             for(InetSocketAddress address : addresses) {
@@ -52,7 +52,7 @@ public class OnlineAndOfflineWatcher implements Watcher {
             }
 
             // 获得负载均衡器进行重新loadBalance
-            LoadBalancer loadBalancer = NrpcBootstrap.LOAD_BALANCER;
+            LoadBalancer loadBalancer = NrpcBootstrap.getInstance().getConfiguration().getLoadBalancer();
             loadBalancer.reLoadBalancer(serviceName, addresses);
         }
     }

@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.example.annotation.NrpcApi;
 import org.example.channelHandler.handler.MethodCallHandler;
 import org.example.channelHandler.handler.NrpcRequestDecoder;
@@ -14,7 +15,6 @@ import org.example.core.HeartbeatDetector;
 import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
-import org.example.loadbalancer.impl.MinimumResponseTimeLoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.transport.message.NrpcRequest;
 import org.slf4j.Logger;
@@ -34,28 +34,16 @@ import java.util.stream.Collectors;
  * @author xiaonaol
  * @date 2024/10/27
  **/
-
+@Slf4j
 public class NrpcBootstrap {
-
-    private static final Logger log = LoggerFactory.getLogger(NrpcBootstrap.class);
 
     // NrpcBootstrap是个单例，每个应用程序只有一个实例
     private static final NrpcBootstrap nrpcBootstrap = new NrpcBootstrap();
 
-    // 定义相关的一些基础配置
-    private String appName = "default";
-    private RegistryConfig registryConfig;
-    private ProtocolConfig protocolConfig;
-    public static final int PORT = 8088;
-    public static final IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
-    public static String SERIALIZE_TYPE = "hessian";
-    public static String COMPRESS_TYPE = "gzip";
+    private Configuration configuration;
 
+    // 保存request对象，可以在当前线程中随时获取
     public static final ThreadLocal<NrpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
-
-    // 注册中心
-    private Registry registry;
-    public static LoadBalancer LOAD_BALANCER;
 
     // 维护已经发布且暴露的服务列表 key -> interface的全限定名
     public static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
@@ -66,8 +54,8 @@ public class NrpcBootstrap {
     public final static Map<Long, CompletableFuture<Object>> PENDING_QUEST = new ConcurrentHashMap<>(128);
 
     private NrpcBootstrap() {
-
         // 构造启动引导程序，需要做什么
+        configuration = new Configuration();
 
     }
 
@@ -83,7 +71,7 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap application(String appName) {
-        this.appName = appName;
+        configuration.setAppName(appName);
         return this;
     }
 
@@ -95,9 +83,18 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap registry(RegistryConfig registryConfig) {
-        this.registry = registryConfig.getRegistry();
-        // todo 需要修改
-        NrpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
+        configuration.setRegistryConfig(registryConfig);
+        return this;
+    }
+
+    /**
+     * 配置负载均衡策略
+     * @param loadBalancer 注册中心配置
+     * @return this当前实例
+     * @author xiaonaol
+     */
+    public NrpcBootstrap loadBalancer(LoadBalancer loadBalancer) {
+        configuration.setLoadBalancer(loadBalancer);
         return this;
     }
 
@@ -108,10 +105,7 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public NrpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        this.protocolConfig = protocolConfig;
-        if(log.isDebugEnabled()) {
-            log.debug("当前工程使用了： {}协议进行序列化", protocolConfig.toString());
-        }
+        configuration.setProtocolConfig(protocolConfig);
         return this;
     }
 
@@ -127,7 +121,7 @@ public class NrpcBootstrap {
      */
     public NrpcBootstrap publish(ServiceConfig<?> service) {
         // 我们抽象了注册中心的概念，使用注册中心的一个实现完成注册
-        registry.register(service);
+        configuration.getRegistryConfig().getRegistry().register(service);
 
         // 1.当服务调用方，通过接口、方法名、具体的方法参数列表发起调用，提供方怎么知道使用哪一个实现
         // （1）new一个 （2）spring beanFactory.getBean(class) （3）自己维护映射关系
@@ -176,7 +170,7 @@ public class NrpcBootstrap {
                     });
 
             // 4、绑定端口
-            ChannelFuture channelFuture = serverBootstrap.bind(PORT).sync();
+            ChannelFuture channelFuture = serverBootstrap.bind(configuration.getPort()).sync();
 
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e){
@@ -204,7 +198,7 @@ public class NrpcBootstrap {
         // 在这个方法里是否可以拿到相关配置项
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
-        reference.setRegistry(registry);
+        reference.setRegistry(configuration.getRegistryConfig().getRegistry());
         return this;
     }
 
@@ -213,23 +207,13 @@ public class NrpcBootstrap {
      * @param serializeType 序列化方式
      */
     public NrpcBootstrap serialize(String serializeType) {
-        SERIALIZE_TYPE = serializeType;
-        if(log.isDebugEnabled()) {
-            log.debug("我们配置了使用的序列化方式为【{}】", serializeType);
-        }
+        configuration.setSerializeType(serializeType);
         return this;
     }
 
     public NrpcBootstrap compress(String compressType) {
-        COMPRESS_TYPE = compressType;
-        if(log.isDebugEnabled()) {
-            log.debug("我们配置了使用的压缩算法为【{}】", compressType);
-        }
+        configuration.setCompressType(compressType);
         return this;
-    }
-
-    public Registry getRegistry() {
-        return registry;
     }
 
     public NrpcBootstrap scan(String packageName) {
@@ -331,6 +315,10 @@ public class NrpcBootstrap {
         fileName = fileName.substring(0, fileName.indexOf(".class"));
 
         return fileName;
+    }
+
+    public Configuration getConfiguration() {
+        return configuration;
     }
 
 

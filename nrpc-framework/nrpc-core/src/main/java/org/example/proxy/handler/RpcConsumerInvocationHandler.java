@@ -58,10 +58,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // 需要对各种请求id和各种类型做区分
         NrpcRequest nrpcRequest = NrpcRequest.builder()
-                .requestId(NrpcBootstrap.ID_GENERATOR.getId())
-                .compressType(CompressorFactory.getCompressor(NrpcBootstrap.COMPRESS_TYPE).getCode())
+                .requestId(NrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
+                .compressType(CompressorFactory.getCompressor(NrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.SERIALIZE_TYPE).getCode())
+                .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
                 .timeStamp(new Date().getTime())
                 .requestPayload(requestPayload)
                 .build();
@@ -72,7 +72,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
         // 传入服务的名字,返回ip+端口
 
-        InetSocketAddress address = NrpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
+        InetSocketAddress address = NrpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
         if (log.isDebugEnabled()) {
             log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
                     interfaceRef.getName(), address);
