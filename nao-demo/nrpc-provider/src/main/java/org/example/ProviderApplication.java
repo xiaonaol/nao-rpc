@@ -27,7 +27,9 @@ public class ProviderApplication {
                 // 配置协议
                 .protocol(new ProtocolConfig("jdk"))
                 // 发布服务
-                .publish(service)
+                //.publish(service)
+                // 扫包批量发布
+                .scan("org.example")
                 // 启动服务
                 .start();
     }

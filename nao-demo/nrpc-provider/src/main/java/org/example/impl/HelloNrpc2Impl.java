@@ -1,6 +1,7 @@
 package org.example.impl;
 
 import org.example.HelloNrpc;
+import org.example.HelloNrpc2;
 import org.example.annotation.NrpcApi;
 
 /**
@@ -10,7 +11,7 @@ import org.example.annotation.NrpcApi;
  * @date 2024/10/26
  **/
 @NrpcApi
-public class HelloNrpcImpl implements HelloNrpc {
+public class HelloNrpc2Impl implements HelloNrpc2 {
     @Override
     public String sayHello(String msg) {
         return "hi consumer: " + msg;

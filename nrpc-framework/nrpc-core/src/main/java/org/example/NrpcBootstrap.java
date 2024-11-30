@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import org.example.annotation.NrpcApi;
 import org.example.channelHandler.handler.MethodCallHandler;
 import org.example.channelHandler.handler.NrpcRequestDecoder;
 import org.example.channelHandler.handler.NrpcResponseEncoder;
@@ -19,13 +20,15 @@ import org.example.transport.message.NrpcRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.net.URL;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @author xiaonaol
@@ -227,6 +230,107 @@ public class NrpcBootstrap {
 
     public Registry getRegistry() {
         return registry;
+    }
+
+    public NrpcBootstrap scan(String packageName) {
+        // 需要通过packageName获取其下所有类的全限定名称
+        List<String> classNames = getAllClassNames(packageName);
+
+        // 2、通过反射获取他的接口，构建具体实现
+        List<Class<?>> classes = classNames.stream()
+                .map(className -> {
+                    try {
+                        return Class.forName(className);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).filter(clazz -> clazz.getAnnotation(NrpcApi.class) != null)
+                .collect(Collectors.toList());
+
+        for(Class<?> clazz : classes) {
+            // 获取他的接口
+            Class<?>[] interfaces = clazz.getInterfaces();
+            Object instance = null;
+            try {
+                instance = clazz.getConstructor().newInstance();
+            } catch (NoSuchMethodException | InvocationTargetException |
+                     InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+
+            for(Class<?> anInterface : interfaces) {
+                ServiceConfig<?> serviceConfig = new ServiceConfig<>();
+                serviceConfig.setInterface(anInterface);
+                serviceConfig.setRef(instance);
+
+                if (log.isDebugEnabled()) {
+                    log.debug("已经通过包扫描，将服务【{}】发布", anInterface);
+                }
+                // 3、发布
+                publish(serviceConfig);
+            }
+        }
+
+        return this;
+    }
+
+    private List<String> getAllClassNames(String packageName) {
+        // 1、通过packageName获得绝对路径
+        // com.example.xxx.yyy -> E://...
+        String basePath = packageName.replaceAll("\\.", "/");
+        URL url = ClassLoader.getSystemClassLoader().getResource(basePath);
+        if(url == null) {
+            throw new RuntimeException("包扫描时路径不存在");
+        }
+        String absolutePath = url.getPath();
+        //
+        List<String> classNames = new ArrayList<>();
+        classNames = recursionFile(absolutePath, classNames, basePath);
+
+        return classNames;
+    }
+
+    private List<String> recursionFile(String absolutePath, List<String> classNames, String basePath) {
+        // 获取文件
+        File file = new File(absolutePath);
+        // 判断文件是否是文件夹
+        if(file.isDirectory()) {
+            // 找到文件夹的所有文件
+            File[] children = file.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    return pathname.isDirectory() || pathname.getPath().contains(".class");
+                }
+            });
+            if(children == null || children.length == 0) {
+                return classNames;
+            }
+            for(File child: children) {
+                if(child.isDirectory()) {
+                    // 递归调用
+                    recursionFile(child.getAbsolutePath(), classNames, basePath);
+                } else {
+                    // 文件 --> 类的全限定名称
+                    String className = getClassNameByAbsolutePath(child.getAbsolutePath(), basePath);
+                    classNames.add(className);
+                }
+            }
+        } else {
+            // 文件 --> 类的全限定名称
+            String className = getClassNameByAbsolutePath(absolutePath, basePath);
+            classNames.add(className);
+        }
+        return classNames;
+    }
+
+    private String getClassNameByAbsolutePath(String absolutePath, String basePath) {
+        String fileName = absolutePath.
+                substring(absolutePath.indexOf(basePath.replaceAll("/", "\\\\")))
+                .replaceAll("\\\\", ".");
+
+        fileName = fileName.substring(0, fileName.indexOf(".class"));
+
+        return fileName;
     }
 
 
