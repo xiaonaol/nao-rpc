@@ -22,7 +22,6 @@ public class HessianSerializer implements Serializer {
         }
         try(ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ) {
-            log.info("使用hessian序列化");
             Hessian2Output hessian2Output = new Hessian2Output(baos);
             hessian2Output.writeObject(object);
             hessian2Output.flush();

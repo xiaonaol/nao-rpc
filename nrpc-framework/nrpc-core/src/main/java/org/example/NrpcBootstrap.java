@@ -43,7 +43,7 @@ public class NrpcBootstrap {
     private String appName = "default";
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    public static final int PORT = 8089;
+    public static final int PORT = 8088;
     public static final IdGenerator ID_GENERATOR = new IdGenerator(1, 2);
     public static String SERIALIZE_TYPE = "hessian";
     public static String COMPRESS_TYPE = "gzip";
@@ -94,7 +94,7 @@ public class NrpcBootstrap {
     public NrpcBootstrap registry(RegistryConfig registryConfig) {
         this.registry = registryConfig.getRegistry();
         // todo 需要修改
-        NrpcBootstrap.LOAD_BALANCER = new MinimumResponseTimeLoadBalancer();
+        NrpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
         return this;
     }
 

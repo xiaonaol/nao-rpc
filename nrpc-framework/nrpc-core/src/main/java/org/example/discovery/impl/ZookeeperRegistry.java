@@ -2,6 +2,8 @@ package org.example.discovery.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.example.Constant;
 import org.example.NrpcBootstrap;
@@ -12,6 +14,7 @@ import org.example.exceptions.NetworkException;
 import org.example.utils.zookeeper.NetUtils;
 import org.example.utils.zookeeper.ZookeeperNode;
 import org.example.utils.zookeeper.ZookeeperUtils;
+import org.example.watcher.OnlineAndOfflineWatcher;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -67,7 +70,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
 
         // 2. 从zk中获取他的子节点
-        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, null);
+        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, new OnlineAndOfflineWatcher());
 
         // 获取了所有的可用的服务列表
         List<InetSocketAddress> inetSocketAddresses = children.stream().map( ipString -> {

@@ -49,4 +49,10 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
      * @return 负载均衡算法选择器
      */
     protected abstract Selector getSelector(List<InetSocketAddress> serviceList);
+
+    @Override
+    public synchronized void reLoadBalancer(String serviceName, List<InetSocketAddress> addresses) {
+        // 根据新的服务列表生成新的selector
+        cache.put(serviceName, getSelector(addresses));
+    }
 }
