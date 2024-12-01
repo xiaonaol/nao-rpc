@@ -3,10 +3,14 @@ package org.example;
 import lombok.Data;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.zookeeper.data.Id;
+import org.example.compress.Compressor;
+import org.example.compress.impl.GzipCompressor;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.serialize.Serializer;
+import org.example.serialize.impl.JdkSerializer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
@@ -44,12 +48,15 @@ public class Configuration {
 
     // 配置信息-->序列化方式
     private String serializeType = "hessian";
+    private Serializer serializer = new JdkSerializer();
 
     // 配置信息-->压缩方式
     private String compressType = "gzip";
+    private Compressor compressor = new GzipCompressor();
 
     // 配置信息-->负载均衡策略
     private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
+
 
     // 读xml
     public Configuration() {
@@ -66,6 +73,11 @@ public class Configuration {
         try {
             // 1、创建一个Document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            // 禁用DTD校验：可以通过调用setValidating(false)方法来禁用DTD校验
+            factory.setValidating(false);
+            // 禁用外部实体解析
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+
             DocumentBuilder builder = factory.newDocumentBuilder();
             InputStream inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("nrpc.xml");
             Document doc = builder.parse(inputStream);
@@ -74,17 +86,87 @@ public class Configuration {
             XPathFactory xPathFactory = XPathFactory.newInstance();
             XPath xPath = xPathFactory.newXPath();
 
-            // 3、解析一个表达式
-            String expression = "/configuration/port";
-            String port = parseString(xPath, doc, expression);
+            // 3、解析所有的标签
+            configuration.setPort(resolvePort(doc, xPath));
+            configuration.setAppName(resolveAppName(doc, xPath));
 
-            expression = "/configuration/serializer";
-            Serializer serializer = parseObject(xPath, doc, expression, null);
+            configuration.setIdGenerator(resolveIdGenerator(doc, xPath));
 
-        } catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException e) {
+            configuration.setRegistryConfig(resolveRegistryConfig(doc, xPath));
+
+            configuration.setCompressType(resolveCompressType(doc, xPath));
+
+            configuration.setSerializeType(resolveSerializeType(doc, xPath));
+            configuration.setLoadBalancer(resolveLoadBalancer(doc, xPath));
+            configuration.setProtocolConfig(new ProtocolConfig(this.serializeType));
+            
+            configuration.setCompressor(resolveCompressor(doc, xPath));
+
+            configuration.setSerializer(resolveSerializer(doc, xPath));
+
+            // 如果有新增的标签从这里添加
+
+        } catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException |
+                 ClassNotFoundException | NoSuchMethodException | InvocationTargetException | InstantiationException |
+                 IllegalAccessException e) {
             log.info("未读取到配置文件", e);
         }
         //
+    }
+
+    private Serializer resolveSerializer(Document doc, XPath xPath) {
+        String expression = "/configuration/serializer";
+        return parseObject(xPath, doc, expression, null);
+    }
+
+    private Compressor resolveCompressor(Document doc, XPath xPath) {
+        String expression = "/configuration/compressor";
+        return parseObject(xPath, doc, expression, null);
+    }
+
+    private RegistryConfig resolveRegistryConfig(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/registry";
+        String url = parseString(xPath, doc, expression);
+        return new RegistryConfig(url);
+    }
+
+    private int resolvePort(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/port";
+        String port = parseString(xPath, doc, expression);
+        return Integer.parseInt(port);
+    }
+
+    private String resolveAppName(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/appName";
+        return parseString(xPath, doc, expression);
+    }
+
+    private LoadBalancer resolveLoadBalancer(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/loadBalancer";
+        return parseObject(xPath, doc, expression, null);
+    }
+
+    private String resolveCompressType(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/compressType";
+        return parseString(xPath, doc, expression, "type");
+    }
+
+    private String resolveSerializeType(Document doc, XPath xPath) throws XPathExpressionException {
+        String expression = "/configuration/serializeType";
+        return parseString(xPath, doc, expression, "type");
+    }
+
+    private IdGenerator resolveIdGenerator(Document doc, XPath xPath) throws XPathExpressionException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        String expression = "/configuration/idGenerator";
+        String aClass = parseString(xPath, doc, expression, "class");
+        String dataCenterId = parseString(xPath, doc, expression, "dataCenterId");
+        String machineId = parseString(xPath, doc, expression, "MachineId");
+
+        Class<?> clazz = Class.forName(aClass);
+        Object instance = clazz.getConstructor(new Class[]{long.class, long.class})
+                .newInstance(Long.parseLong(dataCenterId), Long.parseLong(machineId));
+
+        return (IdGenerator) instance;
     }
 
     /**
@@ -102,6 +184,26 @@ public class Configuration {
         // 表达式可以帮我们获取节点
         Node targetNode = (Node) expr.evaluate(doc, XPathConstants.NODE);
         return targetNode.getTextContent();
+    }
+
+    /**
+     * 获得一个节点属性的值   <port num="7777"></>
+     * @param doc           文档对象
+     * @param xpath         xpath解析器
+     * @param expression    xpath表达式
+     * @param AttributeName 节点名称
+     * @return 节点的值
+     */
+    private String parseString(XPath xpath, Document doc, String expression, String AttributeName) {
+        try {
+            XPathExpression expr = xpath.compile(expression);
+            // 我们的表达式可以帮我们获取节点
+            Node targetNode = (Node) expr.evaluate(doc, XPathConstants.NODE);
+            return targetNode.getAttributes().getNamedItem(AttributeName).getNodeValue();
+        } catch (XPathExpressionException e) {
+            log.error("An exception occurred while parsing the expression.", e);
+        }
+        return null;
     }
 
     /**
