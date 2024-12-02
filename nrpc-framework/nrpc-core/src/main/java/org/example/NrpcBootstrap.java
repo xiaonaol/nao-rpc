@@ -11,14 +11,11 @@ import org.example.annotation.NrpcApi;
 import org.example.channelHandler.handler.MethodCallHandler;
 import org.example.channelHandler.handler.NrpcRequestDecoder;
 import org.example.channelHandler.handler.NrpcResponseEncoder;
+import org.example.config.Configuration;
 import org.example.core.HeartbeatDetector;
-import org.example.discovery.Registry;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
-import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.transport.message.NrpcRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileFilter;

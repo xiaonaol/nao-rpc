@@ -1,16 +1,12 @@
-package org.example;
-
-import lombok.Data;
+package org.example.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.data.Id;
+import org.example.IdGenerator;
+import org.example.ProtocolConfig;
 import org.example.compress.Compressor;
-import org.example.compress.impl.GzipCompressor;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
-import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.serialize.Serializer;
-import org.example.serialize.impl.JdkSerializer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
@@ -24,52 +20,19 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 
 /**
- * 全局的配置类，代码配置-->xml配置-->默认项
  * @author xiaonaol
- * @date 2024/11/30
+ * @date 2024/12/1
  **/
-@Data
 @Slf4j
-public class Configuration {
-    // 配置信息-->端口号
-    private int port = 8088;
+public class XmlResolver {
 
-    // 配置信息-->应用程序名
-    private String appName = "default";
-
-    // 配置信息-->注册中心
-    private RegistryConfig registryConfig;
-
-    // 配置信息-->序列化协议
-    private ProtocolConfig protocolConfig;
-
-    // 配置信息-->ID生成器
-    private IdGenerator idGenerator = new IdGenerator(1, 2);
-
-    // 配置信息-->序列化方式
-    private String serializeType = "hessian";
-    private Serializer serializer = new JdkSerializer();
-
-    // 配置信息-->压缩方式
-    private String compressType = "gzip";
-    private Compressor compressor = new GzipCompressor();
-
-    // 配置信息-->负载均衡策略
-    private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
-
-
-    // 读xml
-    public Configuration() {
-        // 读取xml获得上面的信息
-        loadFromXml(this);
-    }
 
     /**
      * 从xml配置文件中读取配置
      * @param configuration 配置实例
      * @author xiaonaol
      */
-    private void loadFromXml(Configuration configuration) {
+    public void loadFromXml(Configuration configuration) {
         try {
             // 1、创建一个Document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -98,8 +61,8 @@ public class Configuration {
 
             configuration.setSerializeType(resolveSerializeType(doc, xPath));
             configuration.setLoadBalancer(resolveLoadBalancer(doc, xPath));
-            configuration.setProtocolConfig(new ProtocolConfig(this.serializeType));
-            
+            configuration.setProtocolConfig(new ProtocolConfig(configuration.getSerializeType()));
+
             configuration.setCompressor(resolveCompressor(doc, xPath));
 
             configuration.setSerializer(resolveSerializer(doc, xPath));
@@ -236,10 +199,4 @@ public class Configuration {
         }
         return null;
     }
-
-
-    // 进行配置
-
-
-
 }
