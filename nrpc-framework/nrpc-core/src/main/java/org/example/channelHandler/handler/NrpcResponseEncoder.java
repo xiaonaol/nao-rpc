@@ -47,11 +47,11 @@ public class NrpcResponseEncoder extends MessageToByteEncoder<NrpcResponse> {
         byte[] body = null;
         if(nrpcResponse.getBody() != null) {
             Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
-                    .getSerializeType()).getSerializer();
+                    .getSerializeType()).getImpl();
             body = serializer.serialize(nrpcResponse.getBody());
 
             // 2. 压缩
-            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getImpl();
             body = compressor.compress(body);
         }
 

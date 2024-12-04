@@ -1,3 +1,3 @@
-org.example.loadbalancer.impl.ConsistentHashLoadBalancer
-org.example.loadbalancer.impl.MinimumResponseTimeLoadBalancer
-org.example.loadbalancer.impl.RoundRobinLoadBalancer
+1-consistentHash-org.example.loadbalancer.impl.ConsistentHashLoadBalancer
+2-minimumResponseTime-org.example.loadbalancer.impl.MinimumResponseTimeLoadBalancer
+3-roundRobinLoad-org.example.loadbalancer.impl.RoundRobinLoadBalancer

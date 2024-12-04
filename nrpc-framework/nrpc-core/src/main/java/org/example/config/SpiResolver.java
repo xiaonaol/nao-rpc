@@ -1,7 +1,13 @@
 package org.example.config;
 
+import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.loadbalancer.LoadBalancer;
+import org.example.serialize.Serializer;
+import org.example.serialize.SerializerFactory;
 import org.example.spi.SpiHandler;
+
+import java.util.List;
 
 /**
  * @author xiaonaol
@@ -16,8 +22,21 @@ public class SpiResolver {
      */
     public void loadFromSpi(Configuration configuration) {
 
-        // 1
-        LoadBalancer loadBalancer = SpiHandler.get(LoadBalancer.class);
-        configuration.setLoadBalancer(loadBalancer);
+        // spi文件中配置了很多实现
+        List<ObjectWrapper<LoadBalancer>> loadBalancerWrappers = SpiHandler.getList(LoadBalancer.class);
+        // 将其放入工厂
+        if(loadBalancerWrappers != null && !loadBalancerWrappers.isEmpty()) {
+            configuration.setLoadBalancer(loadBalancerWrappers.get(0).getImpl());
+        }
+
+        List<ObjectWrapper<Compressor>> compressorWrappers = SpiHandler.getList(Compressor.class);
+        if(compressorWrappers != null) {
+            compressorWrappers.forEach(CompressorFactory::addCompressor);
+        }
+
+        List<ObjectWrapper<Serializer>> serializerWrappers = SpiHandler.getList(Serializer.class);
+        if(serializerWrappers != null) {
+            serializerWrappers.forEach(SerializerFactory::addSerializer);
+        }
     }
 }

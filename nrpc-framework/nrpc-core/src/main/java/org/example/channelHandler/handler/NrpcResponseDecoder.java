@@ -109,12 +109,12 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 有了payload字节数组后，就可以解压缩反序列化
         // 1. 解压缩
         if(payload.length > 0) {
-            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getCompressor();
+            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getImpl();
             payload = compressor.decompress(payload);
 
             // 2. 反序列化
             Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
-                    .getSerializeType()).getSerializer();
+                    .getSerializeType()).getImpl();
             Object body = serializer.deserialize(payload, Object.class);
             nrpcResponse.setBody(body);
         }

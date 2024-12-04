@@ -7,17 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.compress.Compressor;
 import org.example.compress.CompressorFactory;
 import org.example.enumeration.RequestType;
-import org.example.exceptions.CompressException;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
-import org.example.serialize.SerializerWrapper;
 import org.example.transport.message.MessageFormatConstant;
 import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.RequestPayload;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 
 /**
  * @author xiaonaol
@@ -111,11 +105,11 @@ public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 有了payload字节数组后，就可以解压缩反序列化
         // 1. 解压缩
         if(payload.length > 0) {
-            Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getCompressor();
+            Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getImpl();
             payload = compressor.decompress(payload);
 
             // 2. 反序列化
-            Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
+            Serializer serializer = SerializerFactory.getSerializer(serializeType).getImpl();
             RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
             nrpcRequest.setRequestPayload(requestPayload);
         }
