@@ -9,11 +9,11 @@
 
     <!-- 二选一 -->
     <serializeType type="hessian"/>
-    <serializer class="org.example.serialize.impl.HessianSerializer"/>
+    <serializer code="3" name="hessian" class="org.example.serialize.impl.HessianSerializer"/>
 
     <!-- 二选一 -->
     <compressType type="gzip"/>
-    <compressor class="org.example.compress.impl.GzipCompressor"/>
+    <compressor code="1" name="hessian" class="org.example.compress.impl.GzipCompressor"/>
 
     <!-- 二选一 -->
     <loadBalancer class="org.example.loadbalancer.impl.MinimumResponseTimeLoadBalancer"/>

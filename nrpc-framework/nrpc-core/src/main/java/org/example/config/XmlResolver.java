@@ -4,9 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.IdGenerator;
 import org.example.ProtocolConfig;
 import org.example.compress.Compressor;
+import org.example.compress.CompressorFactory;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
 import org.example.serialize.Serializer;
+import org.example.serialize.SerializerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
@@ -15,9 +17,11 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 
 /**
  * @author xiaonaol
@@ -45,6 +49,9 @@ public class XmlResolver {
             InputStream inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("nrpc.xml");
             Document doc = builder.parse(inputStream);
 
+            System.out.println(doc);
+            System.out.println(doc.getDocumentElement());
+
             // 2、获取一个xpath的解析器
             XPathFactory xPathFactory = XPathFactory.newInstance();
             XPath xPath = xPathFactory.newXPath();
@@ -57,15 +64,21 @@ public class XmlResolver {
 
             configuration.setRegistryConfig(resolveRegistryConfig(doc, xPath));
 
+            // 需要独立的去处理
             configuration.setCompressType(resolveCompressType(doc, xPath));
-
             configuration.setSerializeType(resolveSerializeType(doc, xPath));
+
+            // 处理使用的压缩方式和序列化方式
+            ObjectWrapper<Compressor> compressorObjectWrapper = resolveCompressor(doc, xPath);
+            CompressorFactory.addCompressor(compressorObjectWrapper);
+
+            // 配置新的压缩方式和新的序列化方式，并将其加入工厂中
+            ObjectWrapper<Serializer> serializerObjectWrapper = resolveSerializer(doc, xPath);
+            SerializerFactory.addSerializer(serializerObjectWrapper);
+
             configuration.setLoadBalancer(resolveLoadBalancer(doc, xPath));
+
             configuration.setProtocolConfig(new ProtocolConfig(configuration.getSerializeType()));
-
-            configuration.setCompressor(resolveCompressor(doc, xPath));
-
-            configuration.setSerializer(resolveSerializer(doc, xPath));
 
             // 如果有新增的标签从这里添加
 
@@ -77,14 +90,22 @@ public class XmlResolver {
         //
     }
 
-    private Serializer resolveSerializer(Document doc, XPath xPath) {
+    private ObjectWrapper<Serializer> resolveSerializer(Document doc, XPath xPath) {
         String expression = "/configuration/serializer";
-        return parseObject(xPath, doc, expression, null);
+        Serializer serializer = parseObject(xPath, doc, expression, null);
+        Byte code = Byte.valueOf(Objects.requireNonNull(parseString(xPath, doc, expression, "code")));
+
+        String name = parseString(xPath, doc, expression, "name");
+        return new ObjectWrapper<>(code, name, serializer);
     }
 
-    private Compressor resolveCompressor(Document doc, XPath xPath) {
+    private ObjectWrapper<Compressor> resolveCompressor(Document doc, XPath xPath) {
         String expression = "/configuration/compressor";
-        return parseObject(xPath, doc, expression, null);
+        Compressor compressor = parseObject(xPath, doc, expression, null);
+        Byte code = Byte.valueOf(Objects.requireNonNull(parseString(xPath, doc, expression, "code")));
+
+        String name = parseString(xPath, doc, expression, "name");
+        return new ObjectWrapper<>(code, name, compressor);
     }
 
     private RegistryConfig resolveRegistryConfig(Document doc, XPath xPath) throws XPathExpressionException {

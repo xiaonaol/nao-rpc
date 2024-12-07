@@ -150,7 +150,7 @@ public class SpiHandler {
                 Class<?> aClass = Class.forName(implementName);
                 Object impl = aClass.getConstructor().newInstance();
 
-                ObjectWrapper<?> objectWrapper = new ObjectWrapper<>(code, type, implementName);
+                ObjectWrapper<?> objectWrapper = new ObjectWrapper<>(code, type, impl);
 
                 impls.add(objectWrapper);
             } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
