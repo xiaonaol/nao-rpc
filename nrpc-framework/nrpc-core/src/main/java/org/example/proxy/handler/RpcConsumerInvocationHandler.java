@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.example.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
+import org.example.annotation.TryTimes;
 import org.example.compress.CompressorFactory;
 import org.example.discovery.Registry;
 import org.example.enumeration.RequestType;
@@ -18,7 +19,6 @@ import org.example.transport.message.RequestPayload;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,71 +43,100 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    public Object invoke(Object proxy, Method method, Object[] args) {
+        TryTimes tryTimesAnnotation = method.getAnnotation(TryTimes.class);
 
-        /*
-         * ------------------ 封装报文 ---------------------------
-         */
-        RequestPayload requestPayload = RequestPayload.builder()
-                .interfaceName(interfaceRef.getName())
-                .methodName(method.getName())
-                .parametersType(method.getParameterTypes())
-                .parametersValue(args)
-                .returnType(method.getReturnType())
-                .build();
-
-        // 需要对各种请求id和各种类型做区分
-        NrpcRequest nrpcRequest = NrpcRequest.builder()
-                .requestId(NrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
-                .compressType(CompressorFactory.getCompressor(NrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
-                .requestType(RequestType.REQUEST.getId())
-                .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
-                .timeStamp(System.currentTimeMillis())
-                .requestPayload(requestPayload)
-                .build();
-
-        // 将请求存入本地线程，需要在合适的时候调用remove方法
-        NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
-
-        // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
-        // 传入服务的名字,返回ip+端口
-
-        InetSocketAddress address = NrpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
-        if (log.isDebugEnabled()) {
-            log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
-                    interfaceRef.getName(), address);
+        // 默认0代表不重试
+        int tryTimes = 0;
+        int intervalTime = 2000;
+        if (tryTimesAnnotation != null) {
+            tryTimes = tryTimesAnnotation.tryTimes();
+            intervalTime = tryTimesAnnotation.intervalTime();
         }
 
-        // 3、尝试获取一个可用通道
-        Channel channel = getAvailableChannel(address);
-        if(log.isDebugEnabled()) {
-            log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
-        }
+        while (true) {
+            // 什么情况下需要重试：1、异常 2、响应有问题
+            try {
+                /*
+                 * ------------------ 封装报文 ---------------------------
+                 */
+                RequestPayload requestPayload = RequestPayload.builder()
+                        .interfaceName(interfaceRef.getName())
+                        .methodName(method.getName())
+                        .parametersType(method.getParameterTypes())
+                        .parametersValue(args)
+                        .returnType(method.getReturnType())
+                        .build();
 
-        /*
-         * ------------------异步策略-------------------------
-         */
+                // 需要对各种请求id和各种类型做区分
+                NrpcRequest nrpcRequest = NrpcRequest.builder()
+                        .requestId(NrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
+                        .compressType(CompressorFactory.getCompressor(NrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
+                        .requestType(RequestType.REQUEST.getId())
+                        .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
+                        .timeStamp(System.currentTimeMillis())
+                        .requestPayload(requestPayload)
+                        .build();
 
-        // 4、写出报文
-        CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-        // 将completableFuture暴露
-        NrpcBootstrap.PENDING_QUEST.put(nrpcRequest.getRequestId(), completableFuture);
+                // 将请求存入本地线程，需要在合适的时候调用remove方法
+                NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
 
-        // 这里直接writeAndFlush写出了一个请求，这个请求的实例就会进入pipline执行出站的一系列操作
-        // 我们可以想象到，第一个出站程序一定是将 nrpcRequest -> 二进制报文
-        channel.writeAndFlush(nrpcRequest).addListener((ChannelFutureListener) promise -> {
-            // 只需要处理以下异常就行了
-            if (!promise.isSuccess()) {
-                completableFuture.completeExceptionally(promise.cause());
+                // 2、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
+                // 传入服务的名字,返回ip+端口
+
+                InetSocketAddress address = NrpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
+                if (log.isDebugEnabled()) {
+                    log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
+                            interfaceRef.getName(), address);
+                }
+
+                // 3、尝试获取一个可用通道
+                Channel channel = getAvailableChannel(address);
+                if (log.isDebugEnabled()) {
+                    log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
+                }
+
+                /*
+                 * ------------------异步策略-------------------------
+                 */
+
+                // 4、写出报文
+                CompletableFuture<Object> completableFuture = new CompletableFuture<>();
+                // 将completableFuture暴露
+                NrpcBootstrap.PENDING_QUEST.put(nrpcRequest.getRequestId(), completableFuture);
+
+                // 这里直接writeAndFlush写出了一个请求，这个请求的实例就会进入pipline执行出站的一系列操作
+                // 我们可以想象到，第一个出站程序一定是将 nrpcRequest -> 二进制报文
+                channel.writeAndFlush(nrpcRequest).addListener((ChannelFutureListener) promise -> {
+                    // 只需要处理以下异常就行了
+                    if (!promise.isSuccess()) {
+                        completableFuture.completeExceptionally(promise.cause());
+                    }
+                });
+
+                // 清理ThreadLocal
+                NrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
+
+                // 阻塞等待在pipeline中handler最后执行complete方法
+                // 5、获得响应的结果
+                return completableFuture.get(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                // 次数-1，等待固定时间间隔
+                tryTimes --;
+                try {
+                    Thread.sleep(intervalTime);
+                } catch (InterruptedException e1) {
+                    log.error("重试时发生异常：", e1);
+                }
+                if(tryTimes < 0) {
+                    log.error("对方法【{}】进行远程调用，重试{}次，依然不可调用",
+                            method.getName(), 3-tryTimes);
+                    break;
+                }
+                log.error("在进行第{}次重试时发生异常：", 3-tryTimes, e);
             }
-        });
-
-        // 清理ThreadLocal
-        NrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
-
-        // 阻塞等待在pipeline中handler最后执行complete方法
-        // 5、获得响应的结果
-        return completableFuture.get(10, TimeUnit.SECONDS);
+        }
+        throw new NetworkException("执行远程方法调用失败");
     }
 
 

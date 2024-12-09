@@ -120,8 +120,6 @@ public class NrpcBootstrap {
         // 我们抽象了注册中心的概念，使用注册中心的一个实现完成注册
         configuration.getRegistryConfig().getRegistry().register(service);
 
-        // 1.当服务调用方，通过接口、方法名、具体的方法参数列表发起调用，提供方怎么知道使用哪一个实现
-        // （1）new一个 （2）spring beanFactory.getBean(class) （3）自己维护映射关系
         SERVERS_LIST.put(service.getInterface().getName(), service);
         return this;
     }

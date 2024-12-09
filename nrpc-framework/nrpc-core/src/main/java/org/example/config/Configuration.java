@@ -1,5 +1,6 @@
 package org.example.config;
 
+import ch.qos.logback.core.subst.Token;
 import lombok.Data;
 
 import lombok.extern.slf4j.Slf4j;
@@ -10,8 +11,16 @@ import org.example.compress.impl.GzipCompressor;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
+import org.example.protection.RateLimiter;
+import org.example.protection.TokenBuketRateLimiter;
 import org.example.serialize.Serializer;
 import org.example.serialize.impl.JdkSerializer;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 全局的配置类，代码配置-->xml配置-->默认项
@@ -47,6 +56,8 @@ public class Configuration {
     // 配置信息-->负载均衡策略
     private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
 
+    // 为每一个ip配置一个限流器
+    private Map<SocketAddress, RateLimiter> ipRateLimiter = new ConcurrentHashMap<>(16);
 
     // 读xml
     public Configuration() {

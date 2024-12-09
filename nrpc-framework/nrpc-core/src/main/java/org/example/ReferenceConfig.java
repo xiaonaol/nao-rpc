@@ -33,7 +33,6 @@ public class ReferenceConfig<T> {
 
     /**
      * 代理设计模式，生成一个api接口的代理对象，helloYrpc.sayHi("你好");
-     *
      * @return 代理对象
      */
     public T get() {
