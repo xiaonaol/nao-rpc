@@ -11,6 +11,7 @@ import org.example.compress.impl.GzipCompressor;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
+import org.example.protection.CircuitBreaker;
 import org.example.protection.RateLimiter;
 import org.example.protection.TokenBuketRateLimiter;
 import org.example.serialize.Serializer;
@@ -57,7 +58,10 @@ public class Configuration {
     private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
 
     // 为每一个ip配置一个限流器
-    private Map<SocketAddress, RateLimiter> ipRateLimiter = new ConcurrentHashMap<>(16);
+    private final Map<SocketAddress, RateLimiter> ipRateLimiter = new ConcurrentHashMap<>(16);
+    // 为每一个ip配置一个断路器
+    private final Map<SocketAddress, CircuitBreaker> ipCircuitBreaker = new ConcurrentHashMap<>(16);
+
 
     // 读xml
     public Configuration() {

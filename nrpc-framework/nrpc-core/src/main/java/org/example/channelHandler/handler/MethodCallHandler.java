@@ -102,8 +102,7 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
             log.error("调用服务【{}】的方法【{}】时发生了异常", interfaceName, methodName, e);
             throw new RuntimeException(e);
         }
-
-
+        
         return returnValue;
     }
 }
