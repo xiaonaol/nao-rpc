@@ -7,7 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.NrpcBootstrap;
 import org.example.enumeration.RespCode;
 import org.example.exceptions.ResponseException;
+import org.example.loadbalancer.LoadBalancer;
 import org.example.protection.CircuitBreaker;
+import org.example.transport.message.NrpcRequest;
 import org.example.transport.message.NrpcResponse;
 
 import java.net.SocketAddress;
@@ -56,6 +58,23 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<N
             completableFuture.complete(null);
             log.error("当前id为【{}】的心跳请求，响应码【{}】",
                     nrpcResponse.getRequestId(), code);
+        } else if(code == RespCode.CLOSING.getCode()) {
+            completableFuture.complete(null);
+            if(log.isDebugEnabled()) {
+                log.debug("当前id为【{}】访问被拒绝，目标服务器正在关闭", nrpcResponse.getRequestId());
+            }
+
+            // 修正负载均衡器
+            // 从健康列表中移出
+            NrpcBootstrap.CHANNEL_CACHE.remove(socketAddress);
+            // 找到负载均衡器进行reLoadBalance
+            LoadBalancer loadBalancer = NrpcBootstrap.getInstance()
+                    .getConfiguration().getLoadBalancer();
+            NrpcRequest request = NrpcBootstrap.REQUEST_THREAD_LOCAL.get();
+            loadBalancer.reLoadBalancer(request.getRequestPayload().getInterfaceName(),
+                    NrpcBootstrap.CHANNEL_CACHE.keySet().stream().toList());
+
+            throw new ResponseException(code, RespCode.CLOSING.getDesc());
         } else if(code == RespCode.SUCCESS.getCode()) {
             // 服务提供方，给与的结果
             Object returnValue = nrpcResponse.getBody();

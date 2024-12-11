@@ -13,6 +13,7 @@ import org.example.channelHandler.handler.NrpcRequestDecoder;
 import org.example.channelHandler.handler.NrpcResponseEncoder;
 import org.example.config.Configuration;
 import org.example.core.HeartbeatDetector;
+import org.example.core.NrpcShutdownHook;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
 import org.example.transport.message.NrpcRequest;
@@ -143,6 +144,9 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public void start() {
+        // 注册一个关闭应用程序的Hook函数
+        Runtime.getRuntime().addShutdownHook(new NrpcShutdownHook());
+
         // 1、创建eventLoop，老板只负责处理请求，之后会将请求分发至worker
         EventLoopGroup boss = new NioEventLoopGroup(2);
         EventLoopGroup worker = new NioEventLoopGroup(10);
