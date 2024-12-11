@@ -30,12 +30,12 @@ public class ConsumerApplication {
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .serialize("hessian")
                 .compress("gzip")
-                // 把注册中心以及调用方配置项传递给reference
+                .group("primary")
                 .reference(reference);
 
         // 获取一个代理对象
         HelloNrpc helloNrpc = reference.get();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 1; i++) {
             String sayHi = helloNrpc.sayHello("Hello");
             log.info("sayHi --> {}", sayHi);
         }

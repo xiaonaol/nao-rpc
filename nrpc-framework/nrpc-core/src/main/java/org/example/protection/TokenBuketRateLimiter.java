@@ -23,7 +23,7 @@ public class TokenBuketRateLimiter implements RateLimiter {
         this.capacity = capacity;
         this.rate = rate;
         lastTokenTime = System.currentTimeMillis();
-        tokens = 0;
+        tokens = capacity;
     }
 
     

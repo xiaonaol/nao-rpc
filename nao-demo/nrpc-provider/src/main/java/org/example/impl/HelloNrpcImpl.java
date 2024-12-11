@@ -9,7 +9,7 @@ import org.example.annotation.NrpcApi;
  * @author xiaonaol
  * @date 2024/10/26
  **/
-@NrpcApi
+@NrpcApi(group = "primary")
 public class HelloNrpcImpl implements HelloNrpc {
     @Override
     public String sayHello(String msg) {

@@ -22,7 +22,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
     private Map<String, Selector> cache = new ConcurrentHashMap<>(8);
 
     @Override
-    public InetSocketAddress selectServiceAddress(String serviceName) {
+    public InetSocketAddress selectServiceAddress(String serviceName, String group) {
 
         // 1、优先从cache中获取一个selector
         Selector selector = cache.get(serviceName);
@@ -31,7 +31,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer {
         if(selector == null) {
             // 对于这个负载均衡器，内部应该维护服务列表作为缓存
             List<InetSocketAddress> serviceList = NrpcBootstrap.getInstance().
-                    getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName);
+                    getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName, group);
 
             // 提供一些算法负责选取合适的节点
             selector = getSelector(serviceList);

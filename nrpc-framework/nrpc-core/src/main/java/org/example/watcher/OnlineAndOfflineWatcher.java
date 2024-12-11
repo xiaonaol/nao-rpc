@@ -28,7 +28,8 @@ public class OnlineAndOfflineWatcher implements Watcher {
 
             String serviceName = getServiceName(event.getPath());
             Registry registry = NrpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry();
-            List<InetSocketAddress> addresses = registry.lookup(serviceName);
+            List<InetSocketAddress> addresses = registry.lookup(serviceName,
+                    NrpcBootstrap.getInstance().getConfiguration().getGroup());
             // 处理新增的节点
             for(InetSocketAddress address : addresses) {
                 // 根据地址建立连接，并且缓存

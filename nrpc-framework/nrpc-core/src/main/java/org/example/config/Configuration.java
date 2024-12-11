@@ -1,6 +1,7 @@
 package org.example.config;
 
 import ch.qos.logback.core.subst.Token;
+import lombok.Builder;
 import lombok.Data;
 
 import lombok.extern.slf4j.Slf4j;
@@ -57,11 +58,13 @@ public class Configuration {
     // 配置信息-->负载均衡策略
     private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
 
+    // 分组信息
+    private String group = "default";
+
     // 为每一个ip配置一个限流器
     private final Map<SocketAddress, RateLimiter> ipRateLimiter = new ConcurrentHashMap<>(16);
     // 为每一个ip配置一个断路器
     private final Map<SocketAddress, CircuitBreaker> ipCircuitBreaker = new ConcurrentHashMap<>(16);
-
 
     // 读xml
     public Configuration() {

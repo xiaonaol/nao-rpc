@@ -42,7 +42,7 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<NrpcRequest> 
 
         RateLimiter rateLimiter = ipRateLimiter.get(socketAddress);
         if(rateLimiter == null) {
-            rateLimiter = new TokenBuketRateLimiter(500, 300);
+            rateLimiter = new TokenBuketRateLimiter(10, 10);
             ipRateLimiter.put(socketAddress, rateLimiter);
         }
 

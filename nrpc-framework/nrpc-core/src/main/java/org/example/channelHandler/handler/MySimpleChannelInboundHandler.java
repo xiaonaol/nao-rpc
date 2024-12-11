@@ -52,6 +52,10 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<N
             log.error("当前id为【{}】的请求，未找到目标资源，响应码【{}】",
                     nrpcResponse.getRequestId(), code);
             throw new ResponseException(code, RespCode.RESOURCE_NOT_FOUND.getDesc());
+        } else if(code == RespCode.SUCCESS_HEARTBEAT.getCode()) {
+            completableFuture.complete(null);
+            log.error("当前id为【{}】的心跳请求，响应码【{}】",
+                    nrpcResponse.getRequestId(), code);
         } else if(code == RespCode.SUCCESS.getCode()) {
             // 服务提供方，给与的结果
             Object returnValue = nrpcResponse.getBody();

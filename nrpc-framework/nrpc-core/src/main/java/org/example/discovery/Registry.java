@@ -25,5 +25,5 @@ public interface Registry {
      * @return 服务的地址
      * @author xiaonaol
      */
-    List<InetSocketAddress> lookup(String serviceName);
+    List<InetSocketAddress> lookup(String serviceName, String group);
 }

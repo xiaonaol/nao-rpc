@@ -40,9 +40,18 @@ public class ZookeeperRegistry extends AbstractRegistry {
 
     @Override
     public void register(ServiceConfig<?> service) {
+
         // 服务名称的节点
         String parentNode = Constant.BASE_PROVIDERS_PATH + "/" + service.getInterface().getName();
+
         // 这个节点是一个持久节点
+        if(!ZookeeperUtils.exists(zooKeeper, parentNode, null)) {
+            ZookeeperNode zookeeperNode = new ZookeeperNode(parentNode, null);
+            ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.PERSISTENT);
+        }
+
+        // 建立分组节点
+        parentNode = parentNode + "/" + service.getGroup();
         if(!ZookeeperUtils.exists(zooKeeper, parentNode, null)) {
             ZookeeperNode zookeeperNode = new ZookeeperNode(parentNode, null);
             ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.PERSISTENT);
@@ -64,10 +73,10 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
 
     @Override
-    public List<InetSocketAddress> lookup(String serviceName) {
+    public List<InetSocketAddress> lookup(String serviceName, String group) {
 
         // 1. 找到服务对应的节点
-        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
+        String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName + "/" + group;
 
         // 2. 从zk中获取他的子节点
         List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, new OnlineAndOfflineWatcher());
