@@ -8,14 +8,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.example.annotation.NrpcApi;
-import org.example.channelHandler.handler.MethodCallHandler;
-import org.example.channelHandler.handler.NrpcRequestDecoder;
-import org.example.channelHandler.handler.NrpcResponseEncoder;
+import org.example.channelHandler.handler.providerHandler.MethodCallHandler;
+import org.example.channelHandler.handler.providerHandler.NrpcRequestDecoder;
+import org.example.channelHandler.handler.providerHandler.NrpcResponseEncoder;
 import org.example.config.Configuration;
 import org.example.core.HeartbeatDetector;
 import org.example.core.NrpcShutdownHook;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
+import org.example.netty.NettyServerBootstrapInitializer;
 import org.example.transport.message.NrpcRequest;
 
 import java.io.File;
@@ -97,17 +98,6 @@ public class NrpcBootstrap {
         return this;
     }
 
-    /**
-     * 配置当前暴露的服务使用的协议
-     * @param protocolConfig 协议的封装
-     * @return this当前实例
-     * @author xiaonaol
-     */
-    public NrpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        configuration.setProtocolConfig(protocolConfig);
-        return this;
-    }
-
     /*
      * ----------------------------服务提供方相关api--------------------------------
      */
@@ -144,44 +134,17 @@ public class NrpcBootstrap {
      * @author xiaonaol
      */
     public void start() {
-        // 注册一个关闭应用程序的Hook函数
-        Runtime.getRuntime().addShutdownHook(new NrpcShutdownHook());
-
-        // 1、创建eventLoop，老板只负责处理请求，之后会将请求分发至worker
-        EventLoopGroup boss = new NioEventLoopGroup(2);
-        EventLoopGroup worker = new NioEventLoopGroup(10);
         try {
+            // 配置Netty服务器
+            ServerBootstrap serverBootstrap = NettyServerBootstrapInitializer.getServerBootstrap();
 
-            // 2、需要一个服务器引导程序
-            ServerBootstrap serverBootstrap = new ServerBootstrap();
-            // 3、配置服务器
-            serverBootstrap = serverBootstrap.group(boss, worker)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            // 是核心，我们需要添加很多入站和出站的handler
-                            socketChannel.pipeline().addLast(new LoggingHandler())
-                                    .addLast(new NrpcRequestDecoder())
-                                    // 根据请求进行方法调用
-                                    .addLast(new MethodCallHandler())
-                                    .addLast(new NrpcResponseEncoder());
-                        }
-                    });
-
-            // 4、绑定端口
+            // 绑定端口
             ChannelFuture channelFuture = serverBootstrap.bind(configuration.getPort()).sync();
 
+            // 阻塞等待应用关闭
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e){
             e.printStackTrace();
-        } finally {
-            try {
-                boss.shutdownGracefully().sync();
-                worker.shutdownGracefully().sync();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 

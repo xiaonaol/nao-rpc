@@ -1,4 +1,4 @@
-package org.example.channelHandler.handler;
+package org.example.channelHandler.handler.consumerHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

@@ -4,7 +4,7 @@ import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.example.NettyBootstrapInitializer;
+import org.example.netty.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.discovery.Registry;
 import org.example.loadbalancer.LoadBalancer;

@@ -78,8 +78,6 @@ public class XmlResolver {
 
             configuration.setLoadBalancer(resolveLoadBalancer(doc, xPath));
 
-            configuration.setProtocolConfig(new ProtocolConfig(configuration.getSerializeType()));
-
             // 如果有新增的标签从这里添加
 
         } catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException |

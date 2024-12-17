@@ -1,12 +1,9 @@
 package org.example.config;
 
-import ch.qos.logback.core.subst.Token;
-import lombok.Builder;
 import lombok.Data;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.IdGenerator;
-import org.example.ProtocolConfig;
 import org.example.compress.Compressor;
 import org.example.compress.impl.GzipCompressor;
 import org.example.discovery.RegistryConfig;
@@ -14,13 +11,10 @@ import org.example.loadbalancer.LoadBalancer;
 import org.example.loadbalancer.impl.RoundRobinLoadBalancer;
 import org.example.protection.CircuitBreaker;
 import org.example.protection.RateLimiter;
-import org.example.protection.TokenBuketRateLimiter;
 import org.example.serialize.Serializer;
 import org.example.serialize.impl.JdkSerializer;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,9 +34,6 @@ public class Configuration {
 
     // 配置信息-->注册中心
     private RegistryConfig registryConfig;
-
-    // 配置信息-->序列化协议
-    private ProtocolConfig protocolConfig;
 
     // 配置信息-->ID生成器
     private IdGenerator idGenerator = new IdGenerator(1, 2);

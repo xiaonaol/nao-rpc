@@ -3,7 +3,7 @@ package org.example.core;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
-import org.example.NettyBootstrapInitializer;
+import org.example.netty.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.compress.CompressorFactory;
 import org.example.discovery.Registry;

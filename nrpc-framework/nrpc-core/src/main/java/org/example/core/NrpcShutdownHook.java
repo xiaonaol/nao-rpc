@@ -1,5 +1,7 @@
 package org.example.core;
 
+import org.example.netty.NettyServerBootstrapInitializer;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,6 +30,7 @@ public class NrpcShutdownHook extends Thread {
         }
 
         // 3、阻塞结束后放行，执行其他操作
-
+        NettyServerBootstrapInitializer.boss.shutdownGracefully();
+        NettyServerBootstrapInitializer.worker.shutdownGracefully();
     }
 }

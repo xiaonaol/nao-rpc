@@ -24,8 +24,6 @@ public class ProviderApplication {
                 .application("first-nrpc-provider")
                 // 配置注册中心
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
-                // 配置协议
-                .protocol(new ProtocolConfig("jdk"))
                 // 扫包批量发布
                 .scan("org.example")
                 // 启动服务

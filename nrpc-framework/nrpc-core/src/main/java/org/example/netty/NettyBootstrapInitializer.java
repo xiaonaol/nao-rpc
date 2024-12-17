@@ -1,4 +1,4 @@
-package org.example;
+package org.example.netty;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.nio.NioEventLoopGroup;

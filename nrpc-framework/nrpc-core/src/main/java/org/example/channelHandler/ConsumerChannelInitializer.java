@@ -4,9 +4,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.example.channelHandler.handler.MySimpleChannelInboundHandler;
-import org.example.channelHandler.handler.NrpcRequestEncoder;
-import org.example.channelHandler.handler.NrpcResponseDecoder;
+import org.example.channelHandler.handler.consumerHandler.MySimpleChannelInboundHandler;
+import org.example.channelHandler.handler.consumerHandler.NrpcRequestEncoder;
+import org.example.channelHandler.handler.consumerHandler.NrpcResponseDecoder;
 
 /**
  * @author xiaonaol
