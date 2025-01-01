@@ -1,4 +1,4 @@
-package org.example.channelHandler.handler.consumerHandler;
+package org.example.netty.channelHandler.handler.providerHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -6,21 +6,21 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.example.compress.Compressor;
 import org.example.compress.CompressorFactory;
+import org.example.enumeration.RequestType;
 import org.example.serialize.Serializer;
 import org.example.serialize.SerializerFactory;
 import org.example.transport.message.MessageFormatConstant;
-import org.example.transport.message.NrpcResponse;
-
-import java.util.Date;
+import org.example.transport.message.NrpcRequest;
+import org.example.transport.message.RequestPayload;
 
 /**
  * @author xiaonaol
  * @date 2024/11/16
  **/
 @Slf4j
-public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
+public class NrpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
-    public NrpcResponseDecoder() {
+    public NrpcRequestDecoder() {
         super(
                 // 找到当前报文的总长度，截取报文
                 // 最大帧长度，超过这个maxFrameLength会直接丢弃
@@ -38,6 +38,7 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        log.info("开始解码报文……");
         Object decode = super.decode(ctx, in);
         if(decode instanceof ByteBuf byteBuf){
             return decodeFrame(byteBuf);
@@ -68,8 +69,8 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 4、解析总长度
         int fullLength = byteBuf.readInt();
 
-        // 5、请求类型 判断是不是心跳检测
-        byte responseCode = byteBuf.readByte();
+        // 5、请求类型 todo 判断是不是心跳检测
+        byte requestType = byteBuf.readByte();
 
         // 6、序列化类型
         byte serializeType = byteBuf.readByte();
@@ -84,39 +85,39 @@ public class NrpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         long timeStamp = byteBuf.readLong();
 
         // 我们需要封装
-        NrpcResponse nrpcResponse = new NrpcResponse();
-        nrpcResponse.setRequestId(requestId);
-        nrpcResponse.setCode(responseCode);
-        nrpcResponse.setSerializeType(serializeType);
-        nrpcResponse.setCompressType(compressType);
-        nrpcResponse.setTimeStamp(new Date().getTime());
+        NrpcRequest nrpcRequest = new NrpcRequest();
+        nrpcRequest.setRequestId(requestId);
+        nrpcRequest.setSerializeType(serializeType);
+        nrpcRequest.setCompressType(compressType);
+        nrpcRequest.setRequestType(requestType);
+        nrpcRequest.setTimeStamp(timeStamp);
+
 
         // 心跳请求没有负载，直接返回
-//        if(responseCode == RequestType.HEART_BEAT.getId()) {
-//            return nrpcResponse;
-//        }
+        if(requestType == RequestType.HEART_BEAT.getId()) {
+            return nrpcRequest;
+        }
 
-        int bodyLength = fullLength - headLength;
-        byte[] payload = new byte[bodyLength];
+        int payloadLength = fullLength - headLength;
+        byte[] payload = new byte[payloadLength];
         byteBuf.readBytes(payload);
 
         // 有了payload字节数组后，就可以解压缩反序列化
         // 1. 解压缩
         if(payload.length > 0) {
-            Compressor compressor = CompressorFactory.getCompressor(nrpcResponse.getCompressType()).getImpl();
+            Compressor compressor = CompressorFactory.getCompressor(nrpcRequest.getCompressType()).getImpl();
             payload = compressor.decompress(payload);
 
             // 2. 反序列化
-            Serializer serializer = SerializerFactory.getSerializer(nrpcResponse
-                    .getSerializeType()).getImpl();
-            Object body = serializer.deserialize(payload, Object.class);
-            nrpcResponse.setBody(body);
+            Serializer serializer = SerializerFactory.getSerializer(serializeType).getImpl();
+            RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+            nrpcRequest.setRequestPayload(requestPayload);
         }
 
-        if(log.isDebugEnabled()){
-            log.debug("响应【{}】已在调用端完成解码", nrpcResponse.getRequestId());
+        if(log.isDebugEnabled()) {
+            log.debug("请求【{}】已经在服务端完成解码", nrpcRequest.getRequestId());
         }
 
-        return nrpcResponse;
+        return nrpcRequest;
     }
 }

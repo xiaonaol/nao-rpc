@@ -4,7 +4,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
-import org.example.netty.NettyBootstrapInitializer;
+import org.example.netty.NrpcUtils;
+import org.example.netty.initializer.NettyBootstrapInitializer;
 import org.example.NrpcBootstrap;
 import org.example.annotation.TryTimes;
 import org.example.compress.CompressorFactory;
@@ -36,17 +37,25 @@ import java.util.concurrent.TimeoutException;
  * @date 2024/11/4
  **/
 @Slf4j
-@Builder
 public class RpcConsumerInvocationHandler implements InvocationHandler {
     // 注册中心和接口
     private final Registry registry;
     private final Class<?> interfaceRef;
     private String group;
+    private InetSocketAddress address;
 
     public RpcConsumerInvocationHandler(Registry registry, Class<?> interfaceRef, String group) {
         this.registry = registry;
         this.interfaceRef = interfaceRef;
         this.group = group;
+
+        // 传入服务的名字,返回ip+端口
+        this.address = NrpcBootstrap.getInstance()
+                .getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName(), group);
+        if (log.isDebugEnabled()) {
+            log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
+                    interfaceRef.getName(), address);
+        }
     }
 
     @Override
@@ -55,125 +64,115 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         TryTimes tryTimesAnnotation = method.getAnnotation(TryTimes.class);
 
         // 默认0代表不重试
-        int tryTimes = 0;
-        int intervalTime = 2000;
+        int maxRetry = 0;
+        int intervalTime = 1000;
         if (tryTimesAnnotation != null) {
-            tryTimes = tryTimesAnnotation.tryTimes();
+            maxRetry = tryTimesAnnotation.tryTimes();
             intervalTime = tryTimesAnnotation.intervalTime();
         }
 
-        while (true) {
-            /*
-             * ------------------ 封装报文 ---------------------------
-             */
-            RequestPayload requestPayload = RequestPayload.builder()
-                    .interfaceName(interfaceRef.getName())
-                    .methodName(method.getName())
-                    .parametersType(method.getParameterTypes())
-                    .parametersValue(args)
-                    .returnType(method.getReturnType())
-                    .build();
+        // 发送调用请求
+        try {
+            return executeWithRetry(method, args, maxRetry, intervalTime);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-            /*
-             * ------------------ 创建请求 ---------------------------
-             */
-            NrpcRequest nrpcRequest = NrpcRequest.builder()
-                    .requestId(NrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
-                    .compressType(CompressorFactory.getCompressor(NrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
-                    .requestType(RequestType.REQUEST.getId())
-                    .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
-                    .timeStamp(System.currentTimeMillis())
-                    .requestPayload(requestPayload)
-                    .build();
+    private Object executeWithRetry(Method method, Object[] args, int maxRetry, int intervalTime) throws InterruptedException {
 
-            // 2、将请求存入本地线程，需要在合适的时候调用remove方法
-            NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
+        // 4、获取当前地址对应的断路器，如果断路器打开则不发送请求
+        Map<SocketAddress, CircuitBreaker> ipCircuitBreaker = NrpcBootstrap.getInstance()
+                .getConfiguration().getIpCircuitBreaker();
+        CircuitBreaker circuitBreaker = ipCircuitBreaker.get(address);
+        if(circuitBreaker == null) {
+            circuitBreaker = new CircuitBreaker(10, 0.5F);
+            ipCircuitBreaker.put(address, circuitBreaker);
+        }
 
-            // 3、发现服务，从注册中心拉取服务列表，并通过客户端负载均衡寻找一个可用的服务
-            // 传入服务的名字,返回ip+端口
-            InetSocketAddress address = NrpcBootstrap.getInstance()
-                    .getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName(), group);
-            if (log.isDebugEnabled()) {
-                log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.",
-                        interfaceRef.getName(), address);
-            }
+        // 如果断路器是打开的
+        if(circuitBreaker.isBreak()) {
+            // 定期打开
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    NrpcBootstrap.getInstance()
+                            .getConfiguration().getIpCircuitBreaker().get(address).reset();
+                }
+            }, 5000);
 
-            // 4、获取当前地址对应的断路器，如果断路器打开则不发送请求
-            Map<SocketAddress, CircuitBreaker> ipCircuitBreaker = NrpcBootstrap.getInstance()
-                    .getConfiguration().getIpCircuitBreaker();
-            CircuitBreaker circuitBreaker = ipCircuitBreaker.get(address);
-            if(circuitBreaker == null) {
-                circuitBreaker = new CircuitBreaker(10, 0.5F);
-                ipCircuitBreaker.put(address, circuitBreaker);
-            }
+            throw new RuntimeException("断路器开启，无法发送请求");
+        }
 
+        int attemps = 0;
+        while (attemps <= maxRetry) {
             try {
-                // 如果断路器是打开的
-                if(circuitBreaker.isBreak() && nrpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
-                    // 定期打开
-                    Timer timer = new Timer();
-                    timer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            NrpcBootstrap.getInstance()
-                                    .getConfiguration().getIpCircuitBreaker().get(address).reset();
-                        }
-                    }, 5000);
-
-                    throw new RuntimeException("断路器开启，无法发送请求");
-                }
-
-                // 5、尝试获取一个可用通道
-                Channel channel = getAvailableChannel(address);
-                if (log.isDebugEnabled()) {
-                    log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
-                }
-
-                /*
-                 * ------------------异步策略-------------------------
-                 */
-
-                // 6、写出报文
-                CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-                // 将completableFuture暴露
-                NrpcBootstrap.PENDING_QUEST.put(nrpcRequest.getRequestId(), completableFuture);
-
-                // 这里直接writeAndFlush写出了一个请求，这个请求的实例就会进入pipline执行出站的一系列操作
-                channel.writeAndFlush(nrpcRequest).addListener((ChannelFutureListener) promise -> {
-                    // 只需要处理以下异常就行了
-                    if (!promise.isSuccess()) {
-                        completableFuture.completeExceptionally(promise.cause());
-                    }
-                });
-
-                // 7、清理ThreadLocal
-                NrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
-
-                // 阻塞等待在pipeline中handler最后执行complete方法
-                // 8、获得响应的结果
-                Object result = completableFuture.get(10, TimeUnit.SECONDS);
-                // 记录成功的请求
-                circuitBreaker.recordRequest();
-                return result;
+                return executeRequest(method, args);
             } catch (Exception e) {
-                // 次数-1，等待固定时间间隔
-                tryTimes --;
+                if (++ attemps == maxRetry) {
+                    log.error("对方法【{}】进行远程调用，重试{}次，依然不可调用",
+                            method.getName(), maxRetry);
+                }
+                log.error("在进行第{}次重试时发生异常：", attemps, e);
+
                 // 记录错误的次数
                 circuitBreaker.recordErrorRequest();
-                try {
-                    Thread.sleep(intervalTime);
-                } catch (InterruptedException e1) {
-                    log.error("重试时发生异常：", e1);
-                }
-                if(tryTimes < 0) {
-                    log.error("对方法【{}】进行远程调用，重试{}次，依然不可调用",
-                            method.getName(), 3-tryTimes);
-                    break;
-                }
-                log.error("在进行第{}次重试时发生异常：", 3-tryTimes, e);
+                Thread.sleep(intervalTime);
             }
         }
-        throw new NetworkException("执行远程方法调用失败");
+        throw new RuntimeException("执行远程方法" + method.getName() + "调用失败。");
+    }
+
+    private Object executeRequest(Method method, Object[] args) throws ExecutionException, InterruptedException, TimeoutException {
+        /*
+         * ------------------ 封装报文 ---------------------------
+         */
+        RequestPayload requestPayload = RequestPayload.builder()
+                .interfaceName(interfaceRef.getName())
+                .methodName(method.getName())
+                .parametersType(method.getParameterTypes())
+                .parametersValue(args)
+                .returnType(method.getReturnType())
+                .build();
+
+        /*
+         * ------------------ 创建请求 ---------------------------
+         */
+        NrpcRequest nrpcRequest = NrpcRequest.builder()
+                .requestId(NrpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
+                .compressType(CompressorFactory.getCompressor(NrpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode())
+                .requestType(RequestType.REQUEST.getId())
+                .serializeType(SerializerFactory.getSerializer(NrpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode())
+                .timeStamp(System.currentTimeMillis())
+                .requestPayload(requestPayload)
+                .build();
+
+        // 将请求存入本地线程，需要在合适的时候调用remove方法
+        NrpcBootstrap.REQUEST_THREAD_LOCAL.set(nrpcRequest);
+
+        // 尝试获取一个可用通道
+        Channel channel = getAvailableChannel(address);
+        if (log.isDebugEnabled()) {
+            log.debug("获取了和【{}】建立的连接通道，准备发送数据", address);
+        }
+
+        /*
+         * ------------------异步策略-------------------------
+         */
+
+        // 写出报文
+        CompletableFuture<Object> completableFuture =
+                NrpcUtils.sendRequest(channel, nrpcRequest, NrpcBootstrap.PENDING_QUEST);
+
+        // 清理ThreadLocal
+        NrpcBootstrap.REQUEST_THREAD_LOCAL.remove();
+
+        // 获得响应的结果
+        Object result = completableFuture.get(10, TimeUnit.SECONDS);
+
+        // 记录成功的请求
+        return result;
     }
 
 

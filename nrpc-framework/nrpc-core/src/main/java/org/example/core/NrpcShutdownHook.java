@@ -1,8 +1,6 @@
 package org.example.core;
 
-import org.example.netty.NettyServerBootstrapInitializer;
-
-import java.util.concurrent.TimeUnit;
+import org.example.netty.initializer.NettyServerBootstrapInitializer;
 
 /**
  * @author xiaonaol

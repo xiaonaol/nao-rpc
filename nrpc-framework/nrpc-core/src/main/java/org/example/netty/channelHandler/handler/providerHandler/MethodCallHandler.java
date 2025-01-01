@@ -1,4 +1,4 @@
-package org.example.channelHandler.handler.providerHandler;
+package org.example.netty.channelHandler.handler.providerHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

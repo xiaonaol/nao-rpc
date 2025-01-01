@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class AbstractLoadBalancer implements LoadBalancer {
 
     // 一个服务会匹配一个selector
-    private Map<String, Selector> cache = new ConcurrentHashMap<>(8);
+    private final Map<String, Selector> cache = new ConcurrentHashMap<>(8);
 
     @Override
     public InetSocketAddress selectServiceAddress(String serviceName, String group) {

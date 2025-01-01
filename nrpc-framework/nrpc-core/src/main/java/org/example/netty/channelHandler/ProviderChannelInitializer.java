@@ -1,12 +1,11 @@
-package org.example.channelHandler;
+package org.example.netty.channelHandler;
 
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
-import org.example.channelHandler.handler.providerHandler.MethodCallHandler;
-import org.example.channelHandler.handler.providerHandler.NrpcRequestDecoder;
-import org.example.channelHandler.handler.providerHandler.NrpcResponseEncoder;
+import org.example.netty.channelHandler.handler.providerHandler.MethodCallHandler;
+import org.example.netty.channelHandler.handler.providerHandler.NrpcRequestDecoder;
+import org.example.netty.channelHandler.handler.providerHandler.NrpcResponseEncoder;
 
 /**
  * @author xiaonaol

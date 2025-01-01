@@ -1,11 +1,10 @@
-package org.example.netty;
+package org.example.netty.initializer;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.example.channelHandler.ProviderChannelInitializer;
+import org.example.netty.channelHandler.ProviderChannelInitializer;
 import org.example.core.NrpcShutdownHook;
 
 /**

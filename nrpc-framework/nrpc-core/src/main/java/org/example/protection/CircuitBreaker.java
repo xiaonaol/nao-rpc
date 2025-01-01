@@ -14,14 +14,14 @@ public class CircuitBreaker {
 
     // 需要搜集异常指标
     // 异常的数量 总的请求数
-    private AtomicInteger requestCount = new AtomicInteger(0);
+    private final AtomicInteger requestCount = new AtomicInteger(0);
 
     // 异常的请求数
-    private AtomicInteger errorRequestCount = new AtomicInteger(0);
+    private final AtomicInteger errorRequestCount = new AtomicInteger(0);
 
     // 允许最大的异常比例
-    private int maxErrorRequest;
-    private float maxErrorRate;
+    private final int maxErrorRequest;
+    private final float maxErrorRate;
 
     public CircuitBreaker(int maxErrorRequest, float maxErrorRate) {
         this.maxErrorRequest = maxErrorRequest;

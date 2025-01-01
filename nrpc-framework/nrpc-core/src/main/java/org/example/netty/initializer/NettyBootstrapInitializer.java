@@ -1,9 +1,9 @@
-package org.example.netty;
+package org.example.netty.initializer;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.example.channelHandler.ConsumerChannelInitializer;
+import org.example.netty.channelHandler.ConsumerChannelInitializer;
 
 /**
  * @author xiaonaol

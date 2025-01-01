@@ -1,26 +1,18 @@
 package org.example;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.example.annotation.NrpcApi;
-import org.example.channelHandler.handler.providerHandler.MethodCallHandler;
-import org.example.channelHandler.handler.providerHandler.NrpcRequestDecoder;
-import org.example.channelHandler.handler.providerHandler.NrpcResponseEncoder;
 import org.example.config.Configuration;
 import org.example.core.HeartbeatDetector;
-import org.example.core.NrpcShutdownHook;
 import org.example.discovery.RegistryConfig;
 import org.example.loadbalancer.LoadBalancer;
-import org.example.netty.NettyServerBootstrapInitializer;
+import org.example.netty.initializer.NettyServerBootstrapInitializer;
 import org.example.transport.message.NrpcRequest;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -36,10 +28,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class NrpcBootstrap {
 
+    private final Configuration configuration;
+
     // NrpcBootstrap是个单例，每个应用程序只有一个实例
     private static final NrpcBootstrap nrpcBootstrap = new NrpcBootstrap();
-
-    private Configuration configuration;
 
     // 保存request对象，可以在当前线程中随时获取
     public static final ThreadLocal<NrpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
@@ -48,6 +40,7 @@ public class NrpcBootstrap {
     public static final Map<String, ServiceConfig<?>> SERVERS_LIST = new HashMap<>(16);
 
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
+
     public static final TreeMap<Long, Channel> ANSWER_TIME_CHANNEL_CACHE = new TreeMap<>();
 
     // 定义全局的对外挂起的 completableFuture
@@ -56,7 +49,6 @@ public class NrpcBootstrap {
     private NrpcBootstrap() {
         // 构造启动引导程序，需要做什么
         configuration = new Configuration();
-
     }
 
     public static NrpcBootstrap getInstance() {
@@ -104,16 +96,15 @@ public class NrpcBootstrap {
 
     /**
      * 发布服务，将接口->实现，注册到服务中心
+     *
      * @param service 封装的需要发布的服务
-     * @return this当前实例
      * @author xiaonaol
      */
-    public NrpcBootstrap publish(ServiceConfig<?> service) {
+    public void publish(ServiceConfig<?> service) {
         // 我们抽象了注册中心的概念，使用注册中心的一个实现完成注册
         configuration.getRegistryConfig().getRegistry().register(service);
 
         SERVERS_LIST.put(service.getInterface().getName(), service);
-        return this;
     }
 
     /**
@@ -144,7 +135,7 @@ public class NrpcBootstrap {
             // 阻塞等待应用关闭
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e){
-            e.printStackTrace();
+            log.error("服务提供方运行过程中出现错误", e);
         }
     }
 
@@ -153,7 +144,7 @@ public class NrpcBootstrap {
      * ----------------------------服务调用方相关api--------------------------------
      */
 
-    public NrpcBootstrap reference(ReferenceConfig<?> reference) {
+    public void reference(ReferenceConfig<?> reference) {
 
         // 开启对这个服务的心跳检测
         HeartbeatDetector.detectHeartbeat(reference.getInterface().getName());
@@ -163,7 +154,6 @@ public class NrpcBootstrap {
         // 1、reference需要一个注册中心
         reference.setRegistry(configuration.getRegistryConfig().getRegistry());
         reference.setGroup(this.getConfiguration().getGroup());
-        return this;
     }
 
     /**
@@ -175,11 +165,22 @@ public class NrpcBootstrap {
         return this;
     }
 
+    /**
+     * 配置压缩类型
+     * @param compressType 压缩类型
+     */
     public NrpcBootstrap compress(String compressType) {
         configuration.setCompressType(compressType);
         return this;
     }
 
+
+    /**
+     * 扫包批量发布服务
+     * @param packageName 项目包名
+     * @return NrpcBootstrap
+     * @author xiaonaol
+     */
     public NrpcBootstrap scan(String packageName) {
         // 需要通过packageName获取其下所有类的全限定名称
         List<String> classNames = getAllClassNames(packageName);
@@ -198,7 +199,7 @@ public class NrpcBootstrap {
         for(Class<?> clazz : classes) {
             // 获取他的接口
             Class<?>[] interfaces = clazz.getInterfaces();
-            Object instance = null;
+            Object instance;
             try {
                 instance = clazz.getConstructor().newInstance();
             } catch (NoSuchMethodException | InvocationTargetException |
@@ -249,13 +250,8 @@ public class NrpcBootstrap {
         // 判断文件是否是文件夹
         if(file.isDirectory()) {
             // 找到文件夹的所有文件
-            File[] children = file.listFiles(new FileFilter() {
-                @Override
-                public boolean accept(File pathname) {
-                    return pathname.isDirectory() || pathname.getPath().contains(".class");
-                }
-            });
-            if(children == null || children.length == 0) {
+            File[] children = file.listFiles(pathname -> pathname.isDirectory() || pathname.getPath().contains(".class"));
+            if(children == null) {
                 return classNames;
             }
             for(File child: children) {
@@ -295,8 +291,4 @@ public class NrpcBootstrap {
         return this;
     }
 
-
-    /*
-     * ----------------------------服务核心api--------------------------------
-     */
 }

@@ -24,9 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class ReferenceConfig<T> {
     private Class<T> interfaceRef;
-
     private Registry registry;
-
     private String group;
 
     public void setInterface(Class<T> interfaceRef) {
